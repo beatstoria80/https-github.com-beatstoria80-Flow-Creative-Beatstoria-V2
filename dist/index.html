@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Studio Pro | Beatstoria AI</title>
+  <link rel="manifest" href="/assets/manifest-CZjo5oj7.json" />
+  <meta name="theme-color" content="#000000" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@400;700&family=Oswald:wght@300;500;700&family=Roboto:wght@300;400;500;900&family=Saira+Condensed:wght@400;700;900&family=Righteous&family=Permanent+Marker&family=Merriweather:wght@400;900&family=Pacifico&display=swap"
+    rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <!-- PDF.js for Space NoteLM -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Mermaid.js for Flowcharts, Diagrams, Mind Maps -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+
+  <!-- heic2any for HEIC image format conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
+  <script>
+    // Global PDF.js config
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    }
+
+    // Mermaid Global Helpers
+    window.downloadDiagram = (diagramId) => {
+      const element = document.getElementById(diagramId);
+      if (!element) return;
+      const svg = element.querySelector('svg');
+      if (svg) {
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        const link = document.createElement('a');
+        link.download = `space_diagram_${Date.now()}.svg`;
+        link.href = svgUrl;
+        link.click();
+        URL.revokeObjectURL(svgUrl);
+      }
+    };
+
+    // NEW: Convert Diagram to DataURL for Canvas Injection
+    window.convertDiagramToImage = async (diagramId) => {
+      const element = document.getElementById(diagramId);
+      if (!element) return null;
+      const svg = element.querySelector('svg');
+      if (!svg) return null;
+
+      return new Promise((resolve) => {
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        const svgSize = svg.getBoundingClientRect();
+        // Render at 2x scale for high quality
+        canvas.width = svgSize.width * 2;
+        canvas.height = svgSize.height * 2;
+
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/png'));
+        };
+
+        // Add XML namespace if missing
+        let finalSvgData = svgData;
+        if (!finalSvgData.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+          finalSvgData = finalSvgData.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(finalSvgData)));
+      });
+    };
+  </script>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Montserrat', 'sans-serif'],
+            montserrat: ['Montserrat', 'sans-serif'],
+            poppins: ['Poppins', 'sans-serif'],
+            noto: ['Noto Sans', 'sans-serif'],
+            roboto: ['Roboto', 'sans-serif'],
+            oswald: ['Oswald', 'sans-serif'],
+            bebas: ['Bebas Neue', 'sans-serif'],
+            anton: ['Anton', 'sans-serif'],
+            saira: ['Saira Condensed', 'sans-serif'],
+            righteous: ['Righteous', 'cursive'],
+            marker: ['Permanent Marker', 'cursive'],
+            merriweather: ['Merriweather', 'serif'],
+            pacifico: ['Pacifico', 'cursive'],
+          },
+          colors: {
+            studio: {
+              black: '#050505',
+              dark: '#0a0a0a',
+              border: '#1a1a1a',
+              accent: '#3b82f6',
+              contrast: '#ffffff'
+            }
+          },
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+            'quill-write': 'quill-write 3s ease-in-out infinite',
+          },
+          keyframes: {
+            'quill-write': {
+              '0%, 100%': { transform: 'rotate(-5deg) translateY(0)' },
+              '50%': { transform: 'rotate(15deg) translateY(-3px) translateX(2px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 20px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .dark-scrollbar::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .dark-scrollbar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .dark-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 5px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+
+    .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    .studio-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .studio-scrollbar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    .studio-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #6366f1, #a855f7);
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+      border: 2px solid rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+
+    .checkerboard-bg {
+      background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+
+    /* Diagram Container Styles */
+    .diagram-container {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 24px;
+      margin: 24px 0;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+
+    .diagram-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 12px;
+    }
+
+    .diagram-title {
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #94a3b8;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 250px;
+      color: white;
+      background: transparent !important;
+    }
+
+    /* Mermaid Dark Theme Custom Overrides */
+    .mermaid .node rect {
+      fill: rgba(99, 102, 241, 0.15) !important;
+      stroke: #6366f1 !important;
+      stroke-width: 1.5px !important;
+    }
+
+    .mermaid .node .label {
+      color: #e2e8f0 !important;
+      font-family: 'Montserrat', sans-serif !important;
+      font-weight: 600 !important;
+    }
+
+    .mermaid .edgePath .path {
+      stroke: #3b82f6 !important;
+      stroke-width: 2px !important;
+    }
+
+    .mermaid .mermaid .markerPath {
+      fill: #3b82f6 !important;
+    }
+
+    @keyframes smoke-rise {
+      0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+      }
+
+      20% {
+        opacity: 0.4;
+      }
+
+      100% {
+        transform: translateY(-40px) scale(2);
+        opacity: 0;
+      }
+    }
+
+    .smoke-trail {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      filter: blur(4px);
+      pointer-events: none;
+      animation: smoke-rise 2.5s infinite ease-out;
+      z-index: 50;
+    }
+  </style>
+
+  <script type="module" crossorigin src="/assets/index-DY6Kxbxy.js"></script>
+</head>
+
+<body class="bg-[#f3f4f6]">
+  <div id="root"></div>
+</body>
+
+</html>

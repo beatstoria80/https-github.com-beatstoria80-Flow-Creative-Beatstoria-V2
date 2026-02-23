@@ -1,35 +1,35 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  X, FileText, Plus, Minus, Search, Database, 
-  Globe, Book, Loader2, Bot, User, 
-  Trash2, Volume2, Copy, Layers, 
-  Share2, Microscope, Wand2, Archive, 
-  Link as LinkIcon, Link2Off, Eye, TriangleAlert,
-  ImageIcon, ZoomIn, ZoomOut, Maximize, 
-  ChevronLeft, ChevronRight,
-  Cpu, Briefcase, PencilLine, GraduationCap, BarChart4, List,
-  MessageSquare, Layout, Activity, Sparkles, Box, Signal,
-  ArrowLeft, Grid, ChevronDown, ExternalLink, Download,
-  FileType, FileSpreadsheet, FileCode, Printer, File as FileIcon, BookOpen,
-  Check, Save, Type as LucideType, ArrowDown, ArrowUp, Hash, Workflow,
-  MonitorUp, FileBarChart, Presentation, Network, CircleAlert,
-  BarChart, TrendingUp, ShieldCheck, Sun, Moon, UploadCloud,
-  Scan, FileSearch, HardDrive, Flame, CheckCircle2, Filter, Link2, History,
-  Maximize2, Minimize2, RotateCcw, Move, Scissors, LayoutGrid, Split, Columns, PanelRight, ArrowRight, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
-  Underline, FileCheck, ChevronsLeft, ChevronsRight, Undo, Redo, SpellCheck, 
-  PaintRoller, Highlighter, Link, MessageCircle, Image, ListOrdered, ListIcon, Outdent, Indent, Strikethrough,
-  Table, Grid3X3, FileJson, FileType2, FileOutput, Eraser, FilePlus, Menu, Hand, Sidebar, Square,
-  Globe2, ArrowUpRight, RefreshCcw, Info, AlertCircle, ShieldAlert, Radio,
-  PaintBucket, FunctionSquare, Lock, Star, AlignJustify, MoreHorizontal,
-  FileDown, FilePlus2, EraserIcon, TableProperties, SortAsc, FilterIcon, Languages, Settings2, Puzzle,
-  Ruler, Clipboard, Rocket
+import {
+    X, FileText, Plus, Minus, Search, Database,
+    Globe, Book, Loader2, Bot, User,
+    Trash2, Volume2, Copy, Layers,
+    Share2, Microscope, Wand2, Archive,
+    Link as LinkIcon, Link2Off, Eye, AlertTriangle,
+    ImageIcon, ZoomIn, ZoomOut, Maximize,
+    ChevronLeft, ChevronRight,
+    Cpu, Briefcase, PencilLine, GraduationCap, BarChart3 as BarChart4, List,
+    MessageSquare, Layout, Activity, Sparkles, Box, Signal,
+    ArrowLeft, Grid, ChevronDown, ExternalLink, Download,
+    FileType, FileSpreadsheet, FileCode, Printer, File as FileIcon, BookOpen,
+    Check, Save, Type as LucideType, ArrowDown, ArrowUp, Hash, Workflow,
+    MonitorUp, FileBarChart, Presentation, Network, AlertCircle as CircleAlert,
+    BarChart3 as BarChart, TrendingUp, ShieldCheck, Sun, Moon, UploadCloud,
+    Scan, FileSearch, HardDrive, Flame, CheckCircle2, Filter, Link2, History,
+    Maximize2, Minimize2, RotateCcw, Move, Scissors, LayoutGrid, Split, Columns, PanelRight, ArrowRight, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
+    Underline, FileCheck, ChevronsLeft, ChevronsRight, Undo, Redo, SpellCheck,
+    PaintRoller, Highlighter, Link, MessageCircle, Image, ListOrdered, ListIcon, Outdent, Indent, Strikethrough,
+    Table, Grid3X3, FileJson, FileType2, FileOutput, Eraser, FilePlus, Menu, Hand, Sidebar, Square,
+    Globe2, ArrowUpRight, RefreshCcw, Info, AlertCircle, ShieldAlert, Radio,
+    PaintBucket, FunctionSquare, Lock, Star, AlignJustify, MoreHorizontal,
+    FileDown, FilePlus2, EraserIcon, TableProperties, SortAsc, FilterIcon, Languages, Settings2, Puzzle,
+    Ruler, Clipboard, Rocket
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
-import { 
-    saveNoteDoc, getAllNoteDocs, deleteNoteDoc 
+import {
+    saveNoteDoc, getAllNoteDocs, deleteNoteDoc
 } from '../../services/storageService';
 import { SpaceNoteLM } from '../spacenotelm/SpaceNoteLM';
 import { NoteDocument } from '../../types';
@@ -50,23 +50,23 @@ const studioStyles = `
 `;
 
 interface NoteLMStudioProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onOpenCooking: () => void;
-  onApplyVisual: (src: string) => void;
-  onOpenVoiceStudio: () => void;
+    isOpen: boolean;
+    onClose: () => void;
+    onOpenCooking: () => void;
+    onApplyVisual: (src: string) => void;
+    onOpenVoiceStudio: () => void;
 }
 
 // --- GLOBAL PDF CACHE ---
 const pdfDocCache: Record<string, any> = {};
 
-const fileToBase64Helper = (file: File): Promise<string> => 
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
+const fileToBase64Helper = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+    });
 
 const isRestrictedDomain = (url: string): boolean => {
     const restricted = ['youtube.com', 'google.com', 'facebook.com', 'instagram.com', 'twitter.com', 'linkedin.com', 'github.com'];
@@ -96,10 +96,10 @@ const PDFThumbnailCanvas: React.FC<{ docId: string, src: string, pageNum: number
                 }
 
                 const page = await pdf.getPage(pageNum);
-                
+
                 if (!isMounted || !canvasRef.current) return;
-                
-                const viewport = page.getViewport({ scale: 0.25 }); 
+
+                const viewport = page.getViewport({ scale: 0.25 });
                 const context = canvasRef.current.getContext('2d');
                 if (!context) return;
 
@@ -126,16 +126,16 @@ const PDFThumbnailCanvas: React.FC<{ docId: string, src: string, pageNum: number
     );
 };
 
-const PageThumbnail: React.FC<{ 
-    index: number; 
-    isActive: boolean; 
+const PageThumbnail: React.FC<{
+    index: number;
+    isActive: boolean;
     type: string;
     docId: string;
     src?: string;
     onClick: () => void;
 }> = ({ index, isActive, type, docId, src, onClick }) => {
     return (
-        <button 
+        <button
             onClick={onClick}
             className={`w-full aspect-[3/4] mb-4 rounded-none border-2 transition-all flex flex-col overflow-hidden relative group ${isActive ? 'border-indigo-500 ring-4 ring-indigo-500/20 scale-[1.02] z-10 shadow-xl' : 'border-white/5 hover:border-white/20 opacity-60 hover:opacity-100 shadow-md'}`}
         >
@@ -165,7 +165,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
     const [cellStyles, setCellStyles] = useState<Record<string, React.CSSProperties>>({});
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
-    
+
     // Drag Scroll state
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -273,7 +273,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
         const target = e.target as HTMLElement;
         // Don't drag if user is typing in a cell input
         if (target.tagName === 'INPUT') return;
-        
+
         setIsDragging(true);
         setStartY(e.clientY);
         setStartScrollTop(scrollContainerRef.current?.scrollTop || 0);
@@ -283,7 +283,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
         switch (action) {
             case 'new': setGridData(Array.from({ length: 50 }, () => Array(26).fill(''))); break;
             case 'clear': setGridData(prev => prev.map(row => row.map(() => ''))); break;
-            case 'insert-row': 
+            case 'insert-row':
                 if (selectedCell) {
                     const next = [...gridData];
                     next.splice(selectedCell.r, 0, new Array(gridData[0].length).fill(''));
@@ -393,7 +393,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
                         <div className="flex gap-1">
                             {Object.keys(menuItems).map(m => (
                                 <div key={m} className="relative">
-                                    <button 
+                                    <button
                                         onClick={() => setActiveMenu(activeMenu === m ? null : m)}
                                         className={`px-2 py-0.5 text-[11px] font-medium rounded-none hover:bg-white/10 transition-colors ${activeMenu === m ? 'bg-white/10 text-green-500' : textSec}`}
                                     >
@@ -403,7 +403,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
                                         <div className={`absolute top-full left-0 mt-1 w-56 rounded-none border shadow-2xl z-[1000] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-[#222] border-white/10' : 'bg-white border-gray-100'}`}>
                                             <div className="p-1">
                                                 {menuItems[m].map((item, idx) => (
-                                                    <button 
+                                                    <button
                                                         key={idx}
                                                         onClick={() => handleMenuAction(item.action!)}
                                                         className={`w-full flex items-center justify-between px-3 py-2 rounded-none text-[11px] font-medium transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -474,7 +474,7 @@ const GoogleSheetsEditor: React.FC<{ filename: string; initialData?: string; isD
             </div>
 
             {/* Scrollable Grid Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className={`flex-1 overflow-auto relative hide-scrollbar ${isDark ? 'bg-[#111]' : 'bg-gray-100'} ${isDragging ? 'cursor-grabbing' : 'cursor-default'}`}
                 onMouseDown={handleMouseDown}
@@ -611,7 +611,7 @@ const GoogleDocsEditor: React.FC<{ filename: string; initialContent: string; isD
         const target = e.target as HTMLElement;
         // Don't drag if user clicked inside the editable area
         if (target.closest('[contenteditable="true"]')) return;
-        
+
         setIsDragging(true);
         setStartY(e.clientY);
         setStartScrollTop(scrollContainerRef.current?.scrollTop || 0);
@@ -683,7 +683,7 @@ const GoogleDocsEditor: React.FC<{ filename: string; initialContent: string; isD
                         <div className="flex gap-1">
                             {Object.keys(menuItems).map(m => (
                                 <div key={m} className="relative">
-                                    <button 
+                                    <button
                                         onClick={() => setActiveMenu(activeMenu === m ? null : m)}
                                         className={`px-2 py-0.5 text-[11px] font-medium rounded-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${activeMenu === m ? 'bg-gray-100 dark:bg-gray-700 text-blue-500' : textSec}`}
                                     >
@@ -693,7 +693,7 @@ const GoogleDocsEditor: React.FC<{ filename: string; initialContent: string; isD
                                         <div className={`absolute top-full left-0 mt-1 w-56 rounded-none border shadow-2xl z-[1000] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-[#222] border-white/10' : 'bg-white border-gray-100'}`}>
                                             <div className="p-1">
                                                 {menuItems[m].map((item, idx) => (
-                                                    <button 
+                                                    <button
                                                         key={idx}
                                                         onClick={() => handleMenuAction(item.action!)}
                                                         className={`w-full flex items-center justify-between px-3 py-2 rounded-none text-[11px] font-medium transition-colors ${isDark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -766,17 +766,17 @@ const GoogleDocsEditor: React.FC<{ filename: string; initialContent: string; isD
     );
 };
 
-const DocumentVisualizer: React.FC<{ 
-    doc: NoteDocument; 
+const DocumentVisualizer: React.FC<{
+    doc: NoteDocument;
     isDark: boolean;
     onContentChange: (newContent: string) => void;
-    isMultiMode: boolean; 
+    isMultiMode: boolean;
 }> = ({ doc, isDark, onContentChange, isMultiMode }) => {
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const renderTasks = useRef<any[]>([]); 
+    const renderTasks = useRef<any[]>([]);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const textEditorRef = useRef<HTMLDivElement>(null);
-    
+
     const [currentPage, setCurrentPage] = useState(1);
     const [scale, setScale] = useState(0.85);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -787,9 +787,9 @@ const DocumentVisualizer: React.FC<{
     const [startY, setStartY] = useState(0);
     const [startScrollTop, setStartScrollTop] = useState(0);
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(!isMultiMode); 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(!isMultiMode);
     const [viewMode, setViewMode] = useState<'focus' | 'flow'>(doc.pageCount > 1 ? 'flow' : 'focus');
-    
+
     const [browserUrl, setBrowserUrl] = useState(doc.url || "");
     const [addressInput, setAddressInput] = useState(doc.url || "");
     const [refreshKey, setRefreshKey] = useState(0);
@@ -814,7 +814,7 @@ const DocumentVisualizer: React.FC<{
     useEffect(() => {
         if (doc.type === 'pdf' && doc.originalSrc) {
             const renderSequence = async () => {
-                renderTasks.current.forEach(task => { if (task) try { task.cancel(); } catch(e){} });
+                renderTasks.current.forEach(task => { if (task) try { task.cancel(); } catch (e) { } });
                 renderTasks.current = [];
 
                 try {
@@ -845,12 +845,12 @@ const DocumentVisualizer: React.FC<{
 
                         canvas.height = viewport.height;
                         canvas.width = viewport.width;
-                        
+
                         const renderTask = page.render({ canvasContext: context, viewport: viewport });
                         renderTasks.current[i] = renderTask;
                         await renderTask.promise;
                     }
-                } catch (e) {}
+                } catch (e) { }
             };
             renderSequence();
         }
@@ -934,21 +934,21 @@ const DocumentVisualizer: React.FC<{
     return (
         <div className={`relative w-full h-full overflow-hidden flex ${isDark ? 'bg-[#050505]' : 'bg-slate-100'}`}>
             <style dangerouslySetInnerHTML={{ __html: studioStyles }} />
-            
+
             {/* SIDEBAR WRAPPER */}
             {(doc.pageCount > 1 || doc.type === 'pdf') && !isMultiMode && (
                 <div className="relative flex shrink-0 z-[200]">
-                    <div className={`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r relative flex flex-col overflow-hidden ${isSidebarOpen ? 'w-52' : 'w-0 border-none' } ${isDark ? 'bg-[#080808] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <div className={`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r relative flex flex-col overflow-hidden ${isSidebarOpen ? 'w-52' : 'w-0 border-none'} ${isDark ? 'bg-[#080808] border-white/5' : 'bg-white border-slate-200'}`}>
                         <div className="p-4 flex items-center justify-between border-b border-white/5 bg-black/20 shrink-0">
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">Document Grid</span>
                             <div className="px-2 py-0.5 rounded-none bg-indigo-500/10 text-indigo-500 text-[8px] font-black shrink-0">{doc.pageCount} Pgs</div>
                         </div>
                         <div className="flex-1 overflow-y-auto studio-scrollbar p-5">
                             {Array.from({ length: doc.pageCount }).map((_, i) => (
-                                <PageThumbnail 
-                                    key={i} 
-                                    index={i} 
-                                    isActive={currentPage === i + 1} 
+                                <PageThumbnail
+                                    key={i}
+                                    index={i}
+                                    isActive={currentPage === i + 1}
                                     type={doc.type}
                                     docId={doc.id}
                                     src={doc.originalSrc}
@@ -959,19 +959,19 @@ const DocumentVisualizer: React.FC<{
                         </div>
                     </div>
 
-                    <div 
+                    <div
                         className={`absolute top-0 right-[-10px] bottom-0 w-6 flex items-center justify-center z-[300] group cursor-pointer`}
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     >
                         <div className={`w-0.5 h-full transition-colors duration-500 ${isSidebarOpen ? (isDark ? 'bg-white/5 group-hover:bg-indigo-500/50' : 'bg-slate-200 group-hover:bg-indigo-500/50') : 'bg-transparent'}`} />
-                        
-                        <button 
+
+                        <button
                             className={`
                                 absolute flex flex-col items-center justify-center w-6 h-20 
                                 rounded-none shadow-2xl border backdrop-blur-xl
                                 transition-all duration-500 group-hover:scale-110 active:scale-95
-                                ${isDark 
-                                    ? 'bg-black/80 border-white/10 text-slate-400 group-hover:text-white group-hover:border-indigo-500/50' 
+                                ${isDark
+                                    ? 'bg-black/80 border-white/10 text-slate-400 group-hover:text-white group-hover:border-indigo-500/50'
                                     : 'bg-white/90 border-slate-200 text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-500/50'
                                 }
                             `}
@@ -992,14 +992,14 @@ const DocumentVisualizer: React.FC<{
             )}
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                
+
                 {doc.type !== 'web' && doc.type !== 'sheet' && doc.type !== 'doc' && doc.type !== 'text' && (
                     <div className="absolute right-4 top-4 z-[400] flex items-center gap-2 animate-in slide-in-from-right-2 duration-700">
                         <div className={`flex items-center h-10 px-3 backdrop-blur-3xl border rounded-none shadow-[0_15px_35px_rgba(0,0,0,0.5)] transition-colors ${isDark ? 'bg-black/60 border-white/10' : 'bg-white border-slate-200'}`}>
-                            
+
                             {(doc.pageCount > 1 || doc.type === 'pdf') && (
                                 <div className="flex items-center gap-1.5 border-r border-white/10 pr-3 mr-3 h-full">
-                                    <button 
+                                    <button
                                         onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); setJumpValue(p.toString()); }}
                                         disabled={currentPage === 1}
                                         className="p-1 rounded-none hover:bg-indigo-500/10 text-slate-400 hover:text-indigo-500 disabled:opacity-10 transition-all active:scale-90 flex items-center justify-center"
@@ -1007,18 +1007,18 @@ const DocumentVisualizer: React.FC<{
                                         {/* Use correct icon names */}
                                         <ChevronLeft size={13} strokeWidth={4} />
                                     </button>
-                                    
+
                                     <form onSubmit={handleJump} className={`flex items-center justify-center gap-1 px-2 h-6 rounded-none border transition-all focus-within:border-indigo-500/50 ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
-                                        <input 
-                                            type="text" 
-                                            value={jumpValue} 
+                                        <input
+                                            type="text"
+                                            value={jumpValue}
                                             onChange={(e) => setJumpValue(e.target.value)}
                                             className={`w-4 bg-transparent border-none text-center font-black text-[10px] p-0 outline-none flex items-center justify-center h-full leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}
                                         />
                                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center h-full leading-none">/ {doc.pageCount}</span>
                                     </form>
 
-                                    <button 
+                                    <button
                                         onClick={() => { const p = Math.min(doc.pageCount, currentPage + 1); setCurrentPage(p); setJumpValue(p.toString()); }}
                                         disabled={currentPage === doc.pageCount}
                                         className="p-1 rounded-none hover:bg-indigo-500/10 text-slate-400 hover:text-indigo-500 disabled:opacity-10 transition-all active:scale-90 flex items-center justify-center"
@@ -1032,15 +1032,15 @@ const DocumentVisualizer: React.FC<{
                             {(doc.pageCount > 1 || doc.type === 'pdf') && (
                                 <div className="flex items-center gap-1 border-r border-white/10 pr-3 mr-3">
                                     <div className={`flex p-0.5 rounded-none border ${isDark ? 'bg-black/40 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
-                                        <button 
-                                            onClick={() => { setViewMode('focus'); setScale(0.85); setPosition({x:0,y:0}); }}
+                                        <button
+                                            onClick={() => { setViewMode('focus'); setScale(0.85); setPosition({ x: 0, y: 0 }); }}
                                             className={`w-8 h-6 rounded-none flex items-center justify-center transition-all ${viewMode === 'focus' ? (isDark ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-md') : 'text-slate-500 hover:text-slate-400'}`}
                                             title="Focus Mode"
                                         >
                                             <Square size={10} strokeWidth={3} />
                                         </button>
-                                        <button 
-                                            onClick={() => { setViewMode('flow'); setScale(0.75); setPosition({x:0,y:0}); }}
+                                        <button
+                                            onClick={() => { setViewMode('flow'); setScale(0.75); setPosition({ x: 0, y: 0 }); }}
                                             className={`w-8 h-6 rounded-none flex items-center justify-center transition-all ${viewMode === 'flow' ? (isDark ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-md') : 'text-slate-500 hover:text-slate-400'}`}
                                             title="Flow Mode"
                                         >
@@ -1051,25 +1051,25 @@ const DocumentVisualizer: React.FC<{
                             )}
 
                             <div className="flex items-center gap-1.5">
-                                <button onClick={() => setScale(s => Math.max(0.1, s / 1.15))} className="p-1 text-slate-500 hover:text-indigo-500 transition-colors"><ZoomOut size={13}/></button>
+                                <button onClick={() => setScale(s => Math.max(0.1, s / 1.15))} className="p-1 text-slate-500 hover:text-indigo-500 transition-colors"><ZoomOut size={13} /></button>
                                 <span className="text-[10px] font-black text-slate-400 w-8 text-center">{Math.round(scale * 100)}%</span>
-                                <button onClick={() => setScale(s => Math.min(4, s * 1.15))} className="p-1 text-slate-500 hover:text-indigo-500 transition-colors"><ZoomIn size={13}/></button>
+                                <button onClick={() => setScale(s => Math.min(4, s * 1.15))} className="p-1 text-slate-500 hover:text-indigo-500 transition-colors"><ZoomIn size={13} /></button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                <div 
+                <div
                     ref={scrollContainerRef}
                     className={`flex-1 relative ${isDragging || isDraggingScroll ? 'cursor-grabbing' : (isCanvasMode ? 'cursor-grab' : 'cursor-default')} ${workspaceBg} hide-scrollbar ${doc.type === 'web' || doc.type === 'sheet' || doc.type === 'doc' || doc.type === 'text' ? 'overflow-hidden' : 'overflow-auto'}`}
                     onMouseDown={handleMouseDownScroll}
                 >
                     {/* Workspace dot grid */}
                     <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-                    
-                    <div 
+
+                    <div
                         className={`w-full flex items-center ${doc.type === 'web' || doc.type === 'sheet' || doc.type === 'doc' || doc.type === 'text' ? 'flex-col justify-start pt-0 px-0 min-h-full' : (viewMode === 'flow' ? 'flex-row justify-center min-h-full' : 'flex-col justify-center min-h-full')} transition-all duration-300 ease-out ${viewMode === 'flow' ? 'gap-10' : ''}`}
-                        style={{ 
+                        style={{
                             transform: (doc.type === 'web' || doc.type === 'sheet' || doc.type === 'doc' || doc.type === 'text') ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                             transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.16,1,0.3,1)'
                         }}
@@ -1081,18 +1081,18 @@ const DocumentVisualizer: React.FC<{
                                         {/* Use correct icon names */}
                                         <button className="p-2 rounded-none hover:bg-black/5 text-slate-500 active:scale-95 transition-all" title="Back"><ChevronLeft size={16} /></button>
                                         <button className="p-2 rounded-none hover:bg-black/5 text-slate-500 active:scale-95 transition-all" title="Forward"><ChevronRight size={16} /></button>
-                                        <button 
+                                        <button
                                             onClick={handleRefresh}
-                                            className="p-2 rounded-none hover:bg-black/5 text-slate-500 active:rotate-180 transition-all duration-500" 
+                                            className="p-2 rounded-none hover:bg-black/5 text-slate-500 active:rotate-180 transition-all duration-500"
                                             title="Reload"
                                         >
                                             <RefreshCcw size={14} />
                                         </button>
                                     </div>
-                                    
+
                                     <form onSubmit={handleAddressSubmit} className={`flex-1 flex items-center h-8 px-4 rounded-none border group transition-all focus-within:border-indigo-500/50 ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'}`}>
                                         <Globe2 size={12} className="text-orange-500 mr-2 shrink-0" />
-                                        <input 
+                                        <input
                                             type="text"
                                             value={addressInput}
                                             onChange={(e) => setAddressInput(e.target.value)}
@@ -1103,7 +1103,7 @@ const DocumentVisualizer: React.FC<{
                                         <ShieldCheck size={12} className="text-green-500 ml-2 shrink-0" />
                                     </form>
 
-                                    <button 
+                                    <button
                                         onClick={() => window.open(browserUrl, '_blank')}
                                         className={`flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-none text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-600/20 active:scale-95 group`}
                                     >
@@ -1113,9 +1113,9 @@ const DocumentVisualizer: React.FC<{
 
                                 <div className="flex-1 bg-[#f8fafc] relative overflow-hidden">
                                     {!isUrlRestricted ? (
-                                        <iframe 
+                                        <iframe
                                             key={refreshKey}
-                                            src={browserUrl} 
+                                            src={browserUrl}
                                             className="w-full h-full border-none bg-white"
                                             title={doc.title}
                                             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -1131,12 +1131,12 @@ const DocumentVisualizer: React.FC<{
                                                 <p className="text-[11px] font-medium leading-relaxed text-slate-500 uppercase tracking-wide mb-8 px-4">
                                                     Situs <span className="text-indigo-600 font-bold">{browserUrl.split('/')[2]}</span> memiliki kebijakan keamanan ketat yang mencegah tampilan di dalam kanvas (Refused to Connect).
                                                 </p>
-                                                
-                                                <button 
+
+                                                <button
                                                     onClick={() => window.open(browserUrl, '_blank')}
                                                     className="w-full py-4 bg-slate-950 text-white rounded-none font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl active:scale-95 group"
                                                 >
-                                                    <ArrowUpRight size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" /> 
+                                                    <ArrowUpRight size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                                     LUNCURKAN KE WINDOW BARU
                                                 </button>
 
@@ -1158,9 +1158,9 @@ const DocumentVisualizer: React.FC<{
                                 return (
                                     <div key={pageNum} className="flex flex-col items-center gap-4 group/page animate-in fade-in zoom-in-95 duration-500">
                                         <div className="relative shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] border border-white/5 rounded-none overflow-hidden bg-white">
-                                            <canvas 
-                                                ref={el => { canvasRefs.current[i] = el; }} 
-                                                className="max-w-[85vw] max-h-[90vh] object-contain transition-all duration-500" 
+                                            <canvas
+                                                ref={el => { canvasRefs.current[i] = el; }}
+                                                className="max-w-[85vw] max-h-[90vh] object-contain transition-all duration-500"
                                             />
                                         </div>
                                         <div className="px-6 py-2 rounded-none bg-black/60 backdrop-blur-xl text-[11px] font-black text-white/50 border border-white/10 opacity-0 group-hover/page:opacity-100 transition-all shadow-2xl shrink-0">
@@ -1192,13 +1192,13 @@ const DocumentVisualizer: React.FC<{
                                         <span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">PROSESSOR TEKS AKTIF</span>
                                     </div>
                                 </div>
-                                
+
                                 {/* Centered Paper Scroll Area */}
-                                <div 
-                                    ref={scrollContainerRef} 
+                                <div
+                                    ref={scrollContainerRef}
                                     className="flex-1 overflow-auto flex justify-center p-8 hide-scrollbar bg-slate-100/50 dark:bg-black/20"
                                 >
-                                    <div 
+                                    <div
                                         ref={textEditorRef}
                                         className="w-[816px] min-h-[1056px] bg-white shadow-2xl p-[96px] outline-none cursor-text shrink-0 text-slate-800 block"
                                         contentEditable
@@ -1225,374 +1225,374 @@ const DocumentVisualizer: React.FC<{
 };
 
 export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onOpenCooking, onApplyVisual, onOpenVoiceStudio }) => {
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('space_studio_theme') as any) || 'dark');
-  const isDark = theme === 'dark';
-  const [documents, setDocuments] = useState<NoteDocument[]>([]);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [urlInput, setUrlInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeDocIds, setActiveDocIds] = useState<string[]>([]);
-  const [leftOpen, setLeftOpen] = useState(false); 
-  const [isResearchActive, setIsResearchActive] = useState(false);
-  const [viewMode, setViewMode] = useState<'default' | 'space'>('default');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('space_studio_theme') as any) || 'dark');
+    const isDark = theme === 'dark';
+    const [documents, setDocuments] = useState<NoteDocument[]>([]);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [urlInput, setUrlInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [activeDocIds, setActiveDocIds] = useState<string[]>([]);
+    const [leftOpen, setLeftOpen] = useState(false);
+    const [isResearchActive, setIsResearchActive] = useState(false);
+    const [viewMode, setViewMode] = useState<'default' | 'space'>('default');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const loadData = async () => { try { setDocuments(await getAllNoteDocs()); } catch (e) {} };
-    if (isOpen) loadData();
-  }, [isOpen]);
+    useEffect(() => {
+        const loadData = async () => { try { setDocuments(await getAllNoteDocs()); } catch (e) { } };
+        if (isOpen) loadData();
+    }, [isOpen]);
 
-  const processDocxFile = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const arrayBuffer = e.target?.result as ArrayBuffer;
-            if (!arrayBuffer) {
-                reject(new Error("Failed to read file"));
-                return;
-            }
-            try {
-                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                resolve(result.value);
-            } catch (error) {
-                console.error("Docx processing failed:", error);
-                reject(error);
-            }
-        };
-        reader.onerror = (err) => reject(err);
-        reader.readAsArrayBuffer(file);
-    });
-  };
-
-  const processSheetFile = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = e.target?.result;
-            if (!data) {
-                reject(new Error("Failed to read file"));
-                return;
-            }
-            try {
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const csv = XLSX.utils.sheet_to_csv(worksheet);
-                resolve(csv);
-            } catch (error) {
-                console.error("Sheet processing failed:", error);
-                reject(error);
-            }
-        };
-        reader.onerror = (err) => reject(err);
-        reader.readAsArrayBuffer(file);
-    });
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files) as File[];
-      for (const file of files) {
-          let content = ""; let originalSrc = ""; 
-          const fileType = file.type.toLowerCase();
-          const extension = file.name.split('.').pop()?.toLowerCase();
-          const isDoc = ['doc', 'docx'].includes(extension || '') || fileType.includes('word');
-          const isSheet = ['xls', 'xlsx', 'csv'].includes(extension || '') || fileType.includes('spreadsheet') || fileType.includes('excel');
-          let pageCount = 1;
-
-          if (fileType === 'application/pdf') { 
-              originalSrc = await fileToBase64Helper(file); 
-              content = "PDF_CONTEXT_EXTRACTED";
-              try {
-                  const pdfjsLib = (window as any).pdfjsLib;
-                  const binary = atob(originalSrc.split(',')[1]);
-                  const loadingTask = pdfjsLib.getDocument({ data: binary });
-                  const pdf = await loadingTask.promise;
-                  pageCount = pdf.numPages;
-                  pdfDocCache[file.name] = pdf; 
-              } catch(e) {}
-          } else if (fileType.startsWith('image/')) {
-              originalSrc = await fileToBase64Helper(file);
-              content = "IMAGE_ANALYSIS_READY";
-          } else if (isDoc) {
-              originalSrc = await fileToBase64Helper(file); 
-              content = await processDocxFile(file);
-          } else if (isSheet) {
-              originalSrc = await fileToBase64Helper(file);
-              content = await processSheetFile(file);
-          } else {
-              content = await file.text();
-          }
-
-          const newDoc: NoteDocument = { 
-              id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, 
-              title: file.name.toUpperCase(), 
-              content, 
-              pages: [content], 
-              originalSrc, 
-              timestamp: Date.now(), 
-              type: fileType.includes('pdf') ? 'pdf' : (fileType.startsWith('image/') ? 'image' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'text'))), 
-              pageCount,
-              fileSize: (file.size / 1024).toFixed(1) + " KB"
-          };
-          await saveNoteDoc(newDoc); 
-          setDocuments(prev => [newDoc, ...prev]);
-      }
-    }
-  };
-
-  const handleAddUrl = async () => {
-    if (!urlInput.trim()) return;
-    let url = urlInput.trim();
-    if (!url.startsWith('http')) url = `https://${url}`;
-    const newDoc: NoteDocument = {
-        id: `web-${Date.now()}`,
-        title: url.replace(/^https?:\/\//, '').toUpperCase(),
-        content: `WEB_CONTEXT_INGESTED: ${url}`,
-        pages: [],
-        timestamp: Date.now(),
-        type: 'web',
-        pageCount: 1,
-        url: url,
-        fileSize: "N/A"
+    const processDocxFile = async (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                if (!arrayBuffer) {
+                    reject(new Error("Failed to read file"));
+                    return;
+                }
+                try {
+                    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                    resolve(result.value);
+                } catch (error) {
+                    console.error("Docx processing failed:", error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (err) => reject(err);
+            reader.readAsArrayBuffer(file);
+        });
     };
-    await saveNoteDoc(newDoc);
-    setDocuments(prev => [newDoc, ...prev]);
-    setUrlInput("");
-    setActiveDocIds([newDoc.id]);
-  };
 
-  const handleContentUpdate = async (id: string, newContent: string) => {
-      setDocuments(prev => {
-          const updated = prev.map(doc => doc.id === id ? { ...doc, content: newContent } : doc);
-          const docToSave = updated.find(d => d.id === id);
-          if (docToSave) saveNoteDoc(docToSave);
-          return updated;
-      });
-  };
+    const processSheetFile = async (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target?.result;
+                if (!data) {
+                    reject(new Error("Failed to read file"));
+                    return;
+                }
+                try {
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const csv = XLSX.utils.sheet_to_csv(worksheet);
+                    resolve(csv);
+                } catch (error) {
+                    console.error("Sheet processing failed:", error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (err) => reject(err);
+            reader.readAsArrayBuffer(file);
+        });
+    };
 
-  const handleDocClick = (id: string, e: React.MouseEvent) => {
-      const isMultiKey = e.metaKey || e.ctrlKey || e.shiftKey;
-      setActiveDocIds(prev => { 
-          if (prev.includes(id)) return prev.filter(d => d !== id); 
-          if (isMultiKey) return [...prev, id]; 
-          return [id]; 
-      });
-  };
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files) as File[];
+            for (const file of files) {
+                let content = ""; let originalSrc = "";
+                const fileType = file.type.toLowerCase();
+                const extension = file.name.split('.').pop()?.toLowerCase();
+                const isDoc = ['doc', 'docx'].includes(extension || '') || fileType.includes('word');
+                const isSheet = ['xls', 'xlsx', 'csv'].includes(extension || '') || fileType.includes('spreadsheet') || fileType.includes('excel');
+                let pageCount = 1;
 
-  const handleSendMessage = async () => {
-    if ((!chatInput.trim() && activeDocIds.length === 0) || isLoading) return;
-    setChatMessages(prev => [...prev, { role: 'user', text: chatInput }]);
-    const query = chatInput || "Analisa semua dokumen aktif."; 
-    setChatInput(""); 
-    setIsLoading(true); 
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const activeDocsList = documents.filter(d => activeDocIds.includes(d.id));
-      const contextText = activeDocsList.map(d => `[FILE: ${d.title}]\n${d.content}`).join('\n\n'); 
-      
-      const researchDirective = isResearchActive ? " Perform a deep research analysis using external grounding if necessary. Cross-reference internal document facts with broader industry trends." : "";
+                if (fileType === 'application/pdf') {
+                    originalSrc = await fileToBase64Helper(file);
+                    content = "PDF_CONTEXT_EXTRACTED";
+                    try {
+                        const pdfjsLib = (window as any).pdfjsLib;
+                        const binary = atob(originalSrc.split(',')[1]);
+                        const loadingTask = pdfjsLib.getDocument({ data: binary });
+                        const pdf = await loadingTask.promise;
+                        pageCount = pdf.numPages;
+                        pdfDocCache[file.name] = pdf;
+                    } catch (e) { }
+                } else if (fileType.startsWith('image/')) {
+                    originalSrc = await fileToBase64Helper(file);
+                    content = "IMAGE_ANALYSIS_READY";
+                } else if (isDoc) {
+                    originalSrc = await fileToBase64Helper(file);
+                    content = await processDocxFile(file);
+                } else if (isSheet) {
+                    originalSrc = await fileToBase64Helper(file);
+                    content = await processSheetFile(file);
+                } else {
+                    content = await file.text();
+                }
 
-      const response = await ai.models.generateContent({ 
-          model: 'gemini-3-pro-preview', 
-          contents: `CONTEXT:\n${contextText}\n\nQUERY: ${query}${researchDirective}`, 
-          config: { 
-              systemInstruction: "You are the Lead Neural Architect. Provide technical insights based on the documents.", 
-              tools: [{ googleSearch: {} }] 
-          } 
-      });
-      setChatMessages(prev => [...prev, { 
-          role: 'model', 
-          text: response.text || "",
-          sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
-      }]);
-    } catch (e: any) {
-        setChatMessages(prev => [...prev, { role: 'model', text: "Neural uplink interrupted." }]);
-    } finally { 
-        setIsLoading(false); 
+                const newDoc: NoteDocument = {
+                    id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    title: file.name.toUpperCase(),
+                    content,
+                    pages: [content],
+                    originalSrc,
+                    timestamp: Date.now(),
+                    type: fileType.includes('pdf') ? 'pdf' : (fileType.startsWith('image/') ? 'image' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'text'))),
+                    pageCount,
+                    fileSize: (file.size / 1024).toFixed(1) + " KB"
+                };
+                await saveNoteDoc(newDoc);
+                setDocuments(prev => [newDoc, ...prev]);
+            }
+        }
+    };
+
+    const handleAddUrl = async () => {
+        if (!urlInput.trim()) return;
+        let url = urlInput.trim();
+        if (!url.startsWith('http')) url = `https://${url}`;
+        const newDoc: NoteDocument = {
+            id: `web-${Date.now()}`,
+            title: url.replace(/^https?:\/\//, '').toUpperCase(),
+            content: `WEB_CONTEXT_INGESTED: ${url}`,
+            pages: [],
+            timestamp: Date.now(),
+            type: 'web',
+            pageCount: 1,
+            url: url,
+            fileSize: "N/A"
+        };
+        await saveNoteDoc(newDoc);
+        setDocuments(prev => [newDoc, ...prev]);
+        setUrlInput("");
+        setActiveDocIds([newDoc.id]);
+    };
+
+    const handleContentUpdate = async (id: string, newContent: string) => {
+        setDocuments(prev => {
+            const updated = prev.map(doc => doc.id === id ? { ...doc, content: newContent } : doc);
+            const docToSave = updated.find(d => d.id === id);
+            if (docToSave) saveNoteDoc(docToSave);
+            return updated;
+        });
+    };
+
+    const handleDocClick = (id: string, e: React.MouseEvent) => {
+        const isMultiKey = e.metaKey || e.ctrlKey || e.shiftKey;
+        setActiveDocIds(prev => {
+            if (prev.includes(id)) return prev.filter(d => d !== id);
+            if (isMultiKey) return [...prev, id];
+            return [id];
+        });
+    };
+
+    const handleSendMessage = async () => {
+        if ((!chatInput.trim() && activeDocIds.length === 0) || isLoading) return;
+        setChatMessages(prev => [...prev, { role: 'user', text: chatInput }]);
+        const query = chatInput || "Analisa semua dokumen aktif.";
+        setChatInput("");
+        setIsLoading(true);
+        try {
+            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const activeDocsList = documents.filter(d => activeDocIds.includes(d.id));
+            const contextText = activeDocsList.map(d => `[FILE: ${d.title}]\n${d.content}`).join('\n\n');
+
+            const researchDirective = isResearchActive ? " Perform a deep research analysis using external grounding if necessary. Cross-reference internal document facts with broader industry trends." : "";
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-pro-preview',
+                contents: `CONTEXT:\n${contextText}\n\nQUERY: ${query}${researchDirective}`,
+                config: {
+                    systemInstruction: "You are the Lead Neural Architect. Provide technical insights based on the documents.",
+                    tools: [{ googleSearch: {} }]
+                }
+            });
+            setChatMessages(prev => [...prev, {
+                role: 'model',
+                text: response.text || "",
+                sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+            }]);
+        } catch (e: any) {
+            setChatMessages(prev => [...prev, { role: 'model', text: "Neural uplink interrupted." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const activeDocs = useMemo(() => activeDocIds.map(id => documents.find(d => d.id === id)).filter(Boolean) as NoteDocument[], [activeDocIds, documents]);
+
+    if (!isOpen) return null;
+
+    if (viewMode === 'space') {
+        return (
+            <SpaceNoteLM
+                isOpen={isOpen}
+                onClose={() => setViewMode('default')}
+                documents={documents}
+                onUpload={() => fileInputRef.current?.click()}
+                onDeleteDoc={(id) => { deleteNoteDoc(id); setDocuments(p => p.filter(d => d.id !== id)); }}
+            />
+        );
     }
-  };
 
-  const activeDocs = useMemo(() => activeDocIds.map(id => documents.find(d => d.id === id)).filter(Boolean) as NoteDocument[], [activeDocIds, documents]);
-
-  if (!isOpen) return null;
-
-  if (viewMode === 'space') {
-      return (
-        <SpaceNoteLM 
-            isOpen={isOpen} 
-            onClose={() => setViewMode('default')} 
-            documents={documents}
-            onUpload={() => fileInputRef.current?.click()}
-            onDeleteDoc={(id) => { deleteNoteDoc(id); setDocuments(p => p.filter(d => d.id !== id)); }}
-        />
-      );
-  }
-
-  return (
-    <div className={`fixed inset-0 z-[7000] flex flex-col font-sans overflow-hidden animate-in fade-in duration-500 transition-colors duration-500 ${isDark ? 'bg-[#050505] text-white' : 'bg-white text-slate-900'}`}>
-      <style dangerouslySetInnerHTML={{ __html: studioStyles }} />
-      <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 relative z-100 transition-colors ${isDark ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="flex items-center gap-4">
-            <div className="w-9 h-9 rounded-none bg-orange-600 flex items-center justify-center text-white shadow-xl shadow-orange-600/20">
-                <BookOpen size={18} fill="white" />
-            </div>
-            <div className="flex flex-col"><span className={`text-[11px] font-black uppercase tracking-[0.3em] leading-none ${isDark ? 'text-orange-50' : 'text-indigo-600'}`}>BEATSTORIA AI</span><span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">KNOWLEDGE CORE V5.8</span></div>
-        </div>
-        <div className="flex items-center gap-6">
-            <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className="p-2 rounded-none hover:bg-white/10 transition-colors">{isDark ? <Sun size={14}/> : <Moon size={14}/>}</button>
-            <button onClick={onClose} className="p-2 rounded-none hover:bg-white/10 transition-colors"><X size={22}/></button>
-        </div>
-      </div>
-
-      <div className="flex-1 flex overflow-hidden relative">
-        <div className={`transition-[width] duration-300 ease-in-out border-r shrink-0 overflow-hidden relative ${isDark ? 'bg-[#080808] border-white/5' : 'bg-slate-50 border-slate-200'} ${leftOpen ? 'w-[280px]' : 'w-0 border-none'}`}>
-            <div className="w-[280px] h-full flex flex-col p-5 space-y-4">
-                <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center gap-2"><Globe size={14} className="text-orange-500" /><span className="text-[10px] font-black uppercase tracking-[0.2em]">REPOSITORI</span></div>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 bg-orange-600 rounded-none flex items-center justify-center text-white shadow-xl hover:bg-orange-500 transition-all active:scale-95"><Plus size={18} strokeWidth={4}/></button>
-                </div>
-                
-                <button 
-                    onClick={() => setViewMode('space')}
-                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-none font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
-                >
-                    <Rocket size={14} /> Launch Space NoteLM
-                </button>
-
-                <div className={`p-1 rounded-none border flex items-center gap-2 shadow-inner group transition-all focus-within:border-orange-500/50 ${isDark ? 'bg-black/40 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
-                    <div className="w-8 h-8 rounded-none bg-indigo-600/10 flex items-center justify-center text-indigo-500 ml-1">
-                        <Link2 size={14} />
+    return (
+        <div className={`fixed inset-0 z-[7000] flex flex-col font-sans overflow-hidden animate-in fade-in duration-500 transition-colors duration-500 ${isDark ? 'bg-[#050505] text-white' : 'bg-white text-slate-900'}`}>
+            <style dangerouslySetInnerHTML={{ __html: studioStyles }} />
+            <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 relative z-100 transition-colors ${isDark ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-none bg-orange-600 flex items-center justify-center text-white shadow-xl shadow-orange-600/20">
+                        <BookOpen size={18} fill="white" />
                     </div>
-                    <input 
-                        type="text" 
-                        value={urlInput}
-                        onChange={(e) => setUrlInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
-                        placeholder="Drop link website..." 
-                        className={`flex-1 bg-transparent border-none text-[10px] font-bold py-2 focus:ring-0 outline-none ${isDark ? 'text-slate-200 placeholder:text-slate-700' : 'text-slate-900 placeholder:text-slate-400'}`}
-                    />
-                    <button 
-                        onClick={handleAddUrl}
-                        disabled={!urlInput.trim()}
-                        className={`w-8 h-8 rounded-none flex items-center justify-center transition-all mr-1 ${urlInput.trim() ? 'bg-orange-600 text-white shadow-lg' : 'bg-white/5 text-slate-600'}`}
-                    >
-                        <ArrowUpRight size={14} strokeWidth={3} />
-                    </button>
+                    <div className="flex flex-col"><span className={`text-[11px] font-black uppercase tracking-[0.3em] leading-none ${isDark ? 'text-orange-50' : 'text-indigo-600'}`}>BEATSTORIA AI</span><span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">KNOWLEDGE CORE V5.8</span></div>
                 </div>
-
-                <div className="flex-1 overflow-y-auto studio-scrollbar px-2 space-y-2 pb-10">
-                    {documents.map(doc => (
-                        <div key={doc.id} className={`group flex items-center gap-3 p-4 border rounded-none transition-all cursor-pointer relative ${activeDocIds.includes(doc.id) ? (isDark ? 'bg-indigo-600/10 border-indigo-500/50 shadow-lg' : 'bg-indigo-50 border-indigo-200 shadow-md') : (isDark ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-slate-100 hover:border-slate-200')}`} onClick={(e) => handleDocClick(doc.id, e)}>
-                            <div className={`w-10 h-10 rounded-none flex items-center justify-center border shrink-0 ${isDark ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'}`}>
-                                {doc.type === 'pdf' ? <FileIcon size={18} /> : (doc.type === 'image' ? <ImageIcon size={18}/> : (doc.type === 'web' ? <Globe2 size={18} className="text-orange-500" /> : (doc.type === 'doc' ? <FileText size={18} className="text-blue-500" /> : (doc.type === 'sheet' ? <Table size={18} className="text-green-500" /> : <FileText size={18} />))))}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <span className={`text-[11px] font-black uppercase truncate block ${activeDocIds.includes(doc.id) ? 'text-white' : (isDark ? 'text-slate-300' : 'text-slate-800')}`}>{doc.title}</span>
-                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{doc.type === 'web' ? 'LIVE LINK' : `${doc.pageCount} HALAMAN`} • {doc.fileSize}</span>
-                            </div>
-                            <button onClick={(e) => { e.stopPropagation(); deleteNoteDoc(doc.id); setDocuments(p => p.filter(d => d.id !== doc.id)); }} className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-red-500 transition-all"><Trash2 size={14}/></button>
-                        </div>
-                    ))}
+                <div className="flex items-center gap-6">
+                    <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className="p-2 rounded-none hover:bg-white/10 transition-colors">{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
+                    <button onClick={onClose} className="p-2 rounded-none hover:bg-white/10 transition-colors"><X size={22} /></button>
                 </div>
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" multiple accept=".pdf,.txt,image/*,.doc,.docx,.xls,.xlsx,.csv" />
             </div>
-        </div>
 
-        {/* SIDEBAR EDGE SLIDE HANDLE */}
-        <div 
-            className={`absolute bottom-10 w-8 h-20 flex items-center justify-center z-[300] group cursor-pointer transition-all duration-300`}
-            style={{ left: leftOpen ? '272px' : '-8px' }}
-            onClick={() => setLeftOpen(!leftOpen)}
-        >
-            <div className={`absolute top-[-500%] bottom-[-500%] w-0.5 transition-colors duration-500 ${leftOpen ? (isDark ? 'bg-white/5 group-hover:bg-orange-500/50' : 'bg-slate-200 group-hover:bg-orange-500/50') : 'bg-transparent'}`} />
-            
-            <button 
-                className={`
+            <div className="flex-1 flex overflow-hidden relative">
+                <div className={`transition-[width] duration-300 ease-in-out border-r shrink-0 overflow-hidden relative ${isDark ? 'bg-[#080808] border-white/5' : 'bg-slate-50 border-slate-200'} ${leftOpen ? 'w-[280px]' : 'w-0 border-none'}`}>
+                    <div className="w-[280px] h-full flex flex-col p-5 space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2"><Globe size={14} className="text-orange-500" /><span className="text-[10px] font-black uppercase tracking-[0.2em]">REPOSITORI</span></div>
+                            <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 bg-orange-600 rounded-none flex items-center justify-center text-white shadow-xl hover:bg-orange-500 transition-all active:scale-95"><Plus size={18} strokeWidth={4} /></button>
+                        </div>
+
+                        <button
+                            onClick={() => setViewMode('space')}
+                            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-none font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+                        >
+                            <Rocket size={14} /> Launch Space NoteLM
+                        </button>
+
+                        <div className={`p-1 rounded-none border flex items-center gap-2 shadow-inner group transition-all focus-within:border-orange-500/50 ${isDark ? 'bg-black/40 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
+                            <div className="w-8 h-8 rounded-none bg-indigo-600/10 flex items-center justify-center text-indigo-500 ml-1">
+                                <Link2 size={14} />
+                            </div>
+                            <input
+                                type="text"
+                                value={urlInput}
+                                onChange={(e) => setUrlInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddUrl()}
+                                placeholder="Drop link website..."
+                                className={`flex-1 bg-transparent border-none text-[10px] font-bold py-2 focus:ring-0 outline-none ${isDark ? 'text-slate-200 placeholder:text-slate-700' : 'text-slate-900 placeholder:text-slate-400'}`}
+                            />
+                            <button
+                                onClick={handleAddUrl}
+                                disabled={!urlInput.trim()}
+                                className={`w-8 h-8 rounded-none flex items-center justify-center transition-all mr-1 ${urlInput.trim() ? 'bg-orange-600 text-white shadow-lg' : 'bg-white/5 text-slate-600'}`}
+                            >
+                                <ArrowUpRight size={14} strokeWidth={3} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto studio-scrollbar px-2 space-y-2 pb-10">
+                            {documents.map(doc => (
+                                <div key={doc.id} className={`group flex items-center gap-3 p-4 border rounded-none transition-all cursor-pointer relative ${activeDocIds.includes(doc.id) ? (isDark ? 'bg-indigo-600/10 border-indigo-500/50 shadow-lg' : 'bg-indigo-50 border-indigo-200 shadow-md') : (isDark ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-slate-100 hover:border-slate-200')}`} onClick={(e) => handleDocClick(doc.id, e)}>
+                                    <div className={`w-10 h-10 rounded-none flex items-center justify-center border shrink-0 ${isDark ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                                        {doc.type === 'pdf' ? <FileIcon size={18} /> : (doc.type === 'image' ? <ImageIcon size={18} /> : (doc.type === 'web' ? <Globe2 size={18} className="text-orange-500" /> : (doc.type === 'doc' ? <FileText size={18} className="text-blue-500" /> : (doc.type === 'sheet' ? <Table size={18} className="text-green-500" /> : <FileText size={18} />))))}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className={`text-[11px] font-black uppercase truncate block ${activeDocIds.includes(doc.id) ? 'text-white' : (isDark ? 'text-slate-300' : 'text-slate-800')}`}>{doc.title}</span>
+                                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{doc.type === 'web' ? 'LIVE LINK' : `${doc.pageCount} HALAMAN`} • {doc.fileSize}</span>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteNoteDoc(doc.id); setDocuments(p => p.filter(d => d.id !== doc.id)); }} className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" multiple accept=".pdf,.txt,image/*,.doc,.docx,.xls,.xlsx,.csv" />
+                    </div>
+                </div>
+
+                {/* SIDEBAR EDGE SLIDE HANDLE */}
+                <div
+                    className={`absolute bottom-10 w-8 h-20 flex items-center justify-center z-[300] group cursor-pointer transition-all duration-300`}
+                    style={{ left: leftOpen ? '272px' : '-8px' }}
+                    onClick={() => setLeftOpen(!leftOpen)}
+                >
+                    <div className={`absolute top-[-500%] bottom-[-500%] w-0.5 transition-colors duration-500 ${leftOpen ? (isDark ? 'bg-white/5 group-hover:bg-orange-500/50' : 'bg-slate-200 group-hover:bg-orange-500/50') : 'bg-transparent'}`} />
+
+                    <button
+                        className={`
                     absolute flex flex-col items-center justify-center w-6 h-20 
                     rounded-none shadow-2xl border backdrop-blur-xl
                     transition-all duration-500 group-hover:scale-110 active:scale-95
-                    ${isDark 
-                        ? 'bg-black/80 border-white/10 text-slate-400 group-hover:text-white group-hover:border-indigo-500/50' 
-                        : 'bg-white/90 border-slate-200 text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-500/50'
-                    }
+                    ${isDark
+                                ? 'bg-black/80 border-white/10 text-slate-400 group-hover:text-white group-hover:border-indigo-500/50'
+                                : 'bg-white/90 border-slate-200 text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-500/50'
+                            }
                 `}
-                title={leftOpen ? "Minimize Repository" : "Maximize Repository"}
-            >
-                <div className="flex flex-col items-center gap-1">
-                    {/* Use correct icon names without alias to fix Cannot find name error */}
-                    {leftOpen ? <ChevronLeft size={16} strokeWidth={3} /> : <ChevronRight size={16} strokeWidth={3} />}
-                    <div className="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
-                        <div className="w-1 h-1 rounded-none bg-current"></div>
-                        <div className="w-1 h-1 rounded-none bg-current"></div>
-                        <div className="w-1 h-1 rounded-none bg-current"></div>
-                    </div>
-                </div>
-            </button>
-        </div>
-
-        <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
-            {activeDocs.length > 0 ? (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className={`h-12 border-b flex items-center justify-between px-8 shrink-0 z-10 transition-colors ${isDark ? 'bg-black/40 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
-                        <button onClick={() => setActiveDocIds([])} className={`flex items-center gap-2.5 transition-all active:scale-95 ${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-600 hover:text-indigo-600'}`}><ArrowLeft size={16} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">KEMBALI KE CHAT</span></button>
-                        <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{activeDocs.length} DOKUMEN AKTIF</span>
-                        </div>
-                    </div>
-                    <div className={`flex-1 overflow-hidden grid ${activeDocs.length === 1 ? 'grid-cols-1' : (activeDocs.length === 2 ? 'grid-cols-2' : (activeDocs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 overflow-y-auto studio-scrollbar'))} divide-x transition-colors ${isDark ? 'bg-[#0a0a0a] divide-white/5' : 'bg-slate-200 divide-slate-300'}`}>
-                        {activeDocs.map((doc) => (
-                            <div key={doc.id} className="h-full flex flex-col overflow-hidden relative">
-                                <DocumentVisualizer doc={doc} isDark={isDark} onContentChange={(newContent) => handleContentUpdate(doc.id, newContent)} isMultiMode={activeDocs.length > 1} />
+                        title={leftOpen ? "Minimize Repository" : "Maximize Repository"}
+                    >
+                        <div className="flex flex-col items-center gap-1">
+                            {/* Use correct icon names without alias to fix Cannot find name error */}
+                            {leftOpen ? <ChevronLeft size={16} strokeWidth={3} /> : <ChevronRight size={16} strokeWidth={3} />}
+                            <div className="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
+                                <div className="w-1 h-1 rounded-none bg-current"></div>
+                                <div className="w-1 h-1 rounded-none bg-current"></div>
+                                <div className="w-1 h-1 rounded-none bg-current"></div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 select-none">
-                    <div className={`w-24 h-24 rounded-none flex items-center justify-center border shadow-2xl mb-8 ${isDark ? 'bg-orange-600/10 border-orange-500/20' : 'bg-indigo-50 border-indigo-200'}`}>
-                        <Database size={48} className={isDark ? "text-orange-500" : "text-indigo-600"} strokeWidth={1} />
-                    </div>
-                    <h2 className={`text-4xl font-anton uppercase tracking-[0.2em] ${isDark ? 'text-white' : 'text-slate-900'}`}>Beatstoria Knowledge</h2>
-                    <p className="text-[11px] font-black uppercase tracking-[0.5em] mt-6 text-slate-500 max-w-md leading-loose">
-                        Analisa data multi-dokumen secara simultan. Pilih file atau injeksi link website dari repositori untuk memulai sintesis neural.
-                    </p>
-                </div>
-            )}
-            
-            {/* CHAT BOX */}
-            {leftOpen && (
-                <div className={`absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t pointer-events-none z-50 animate-in slide-in-from-bottom-4 duration-500 ${isDark ? 'from-black via-black/95 to-transparent' : 'from-slate-100 via-slate-100/95 to-transparent'}`}>
-                    <div className="max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
-                        <div className={`flex items-center border rounded-none p-2 shadow-2xl transition-all focus-within:border-indigo-500/40 w-full group relative ${isDark ? 'bg-[#0d0d0d]/90 border-white/10 backdrop-blur-3xl' : 'bg-white/90 border-slate-200 backdrop-blur-2xl'}`}>
-                            {/* AI RESEARCH TOGGLE BUTTON */}
-                            <button 
-                                onClick={() => setIsResearchActive(!isResearchActive)}
-                                className={`w-12 h-12 flex items-center justify-center rounded-none transition-all active:scale-90 ml-1 group/research ${isResearchActive ? 'bg-indigo-600 research-active text-white' : 'text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400'}`}
-                                title={isResearchActive ? "Mode Riset Lanjutan AKTIF" : "Aktifkan FITUR Lanjutan AI Research"}
-                            >
-                                <Microscope size={20} className={isResearchActive ? 'animate-pulse' : 'group-hover/research:scale-110 transition-transform'} />
-                            </button>
-
-                            <input 
-                                type="text" 
-                                value={chatInput} 
-                                onChange={(e) => setChatInput(e.target.value)} 
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} 
-                                placeholder={isResearchActive ? "Riset lanjutan aktif: Tanyakan detail teknis..." : "Tanyakan sesuatu tentang dokumen..."} 
-                                className={`flex-1 bg-transparent border-none text-[14px] font-bold px-4 py-4 focus:ring-0 outline-none ${isDark ? 'text-white placeholder:text-slate-800' : 'text-slate-900 placeholder:text-slate-300'}`} 
-                            />
-                            
-                            <button onClick={handleSendMessage} disabled={isLoading} className={`w-14 h-14 border rounded-none font-black text-[12px] uppercase shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-30 group/btn shrink-0 mr-1 ${isDark ? 'bg-[#16161c] border-white/10 text-slate-400 hover:bg-orange-600 hover:text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-indigo-600 hover:text-white'}`}>
-                                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} className="text-orange-500" />}
-                            </button>
                         </div>
-                    </div>
+                    </button>
                 </div>
-            )}
+
+                <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
+                    {activeDocs.length > 0 ? (
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <div className={`h-12 border-b flex items-center justify-between px-8 shrink-0 z-10 transition-colors ${isDark ? 'bg-black/40 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
+                                <button onClick={() => setActiveDocIds([])} className={`flex items-center gap-2.5 transition-all active:scale-95 ${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-600 hover:text-indigo-600'}`}><ArrowLeft size={16} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">KEMBALI KE CHAT</span></button>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{activeDocs.length} DOKUMEN AKTIF</span>
+                                </div>
+                            </div>
+                            <div className={`flex-1 overflow-hidden grid ${activeDocs.length === 1 ? 'grid-cols-1' : (activeDocs.length === 2 ? 'grid-cols-2' : (activeDocs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 overflow-y-auto studio-scrollbar'))} divide-x transition-colors ${isDark ? 'bg-[#0a0a0a] divide-white/5' : 'bg-slate-200 divide-slate-300'}`}>
+                                {activeDocs.map((doc) => (
+                                    <div key={doc.id} className="h-full flex flex-col overflow-hidden relative">
+                                        <DocumentVisualizer doc={doc} isDark={isDark} onContentChange={(newContent) => handleContentUpdate(doc.id, newContent)} isMultiMode={activeDocs.length > 1} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 select-none">
+                            <div className={`w-24 h-24 rounded-none flex items-center justify-center border shadow-2xl mb-8 ${isDark ? 'bg-orange-600/10 border-orange-500/20' : 'bg-indigo-50 border-indigo-200'}`}>
+                                <Database size={48} className={isDark ? "text-orange-500" : "text-indigo-600"} strokeWidth={1} />
+                            </div>
+                            <h2 className={`text-4xl font-anton uppercase tracking-[0.2em] ${isDark ? 'text-white' : 'text-slate-900'}`}>Beatstoria Knowledge</h2>
+                            <p className="text-[11px] font-black uppercase tracking-[0.5em] mt-6 text-slate-500 max-w-md leading-loose">
+                                Analisa data multi-dokumen secara simultan. Pilih file atau injeksi link website dari repositori untuk memulai sintesis neural.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* CHAT BOX */}
+                    {leftOpen && (
+                        <div className={`absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t pointer-events-none z-50 animate-in slide-in-from-bottom-4 duration-500 ${isDark ? 'from-black via-black/95 to-transparent' : 'from-slate-100 via-slate-100/95 to-transparent'}`}>
+                            <div className="max-w-5xl mx-auto flex flex-col gap-2 pointer-events-auto">
+                                <div className={`flex items-center border rounded-none p-2 shadow-2xl transition-all focus-within:border-indigo-500/40 w-full group relative ${isDark ? 'bg-[#0d0d0d]/90 border-white/10 backdrop-blur-3xl' : 'bg-white/90 border-slate-200 backdrop-blur-2xl'}`}>
+                                    {/* AI RESEARCH TOGGLE BUTTON */}
+                                    <button
+                                        onClick={() => setIsResearchActive(!isResearchActive)}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-none transition-all active:scale-90 ml-1 group/research ${isResearchActive ? 'bg-indigo-600 research-active text-white' : 'text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400'}`}
+                                        title={isResearchActive ? "Mode Riset Lanjutan AKTIF" : "Aktifkan FITUR Lanjutan AI Research"}
+                                    >
+                                        <Microscope size={20} className={isResearchActive ? 'animate-pulse' : 'group-hover/research:scale-110 transition-transform'} />
+                                    </button>
+
+                                    <input
+                                        type="text"
+                                        value={chatInput}
+                                        onChange={(e) => setChatInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                        placeholder={isResearchActive ? "Riset lanjutan aktif: Tanyakan detail teknis..." : "Tanyakan sesuatu tentang dokumen..."}
+                                        className={`flex-1 bg-transparent border-none text-[14px] font-bold px-4 py-4 focus:ring-0 outline-none ${isDark ? 'text-white placeholder:text-slate-800' : 'text-slate-900 placeholder:text-slate-300'}`}
+                                    />
+
+                                    <button onClick={handleSendMessage} disabled={isLoading} className={`w-14 h-14 border rounded-none font-black text-[12px] uppercase shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-30 group/btn shrink-0 mr-1 ${isDark ? 'bg-[#16161c] border-white/10 text-slate-400 hover:bg-orange-600 hover:text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-indigo-600 hover:text-white'}`}>
+                                        {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} className="text-orange-500" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };

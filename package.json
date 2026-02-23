@@ -5,18 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.1.1",
+    "@google/genai": "^1.0.0",
     "@imgly/background-removal": "^1.5.5",
     "html-to-image": "^1.11.11",
     "jszip": "^3.10.1",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.575.0",
+    "mammoth": "^1.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-rnd": "^10.4.1"
+    "react-rnd": "^10.4.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",

@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -38,26 +38,26 @@ export const SKIN_INTEGRITY_PROTOCOL = `
 `;
 
 export const prepareImageForAi = async (src: string | File): Promise<{ data: string, mimeType: string }> => {
-  if (typeof src === 'string') {
-    if (src.startsWith('data:')) {
-      return { data: src.split(',')[1], mimeType: src.substring(src.indexOf(':') + 1, src.indexOf(';')) };
+    if (typeof src === 'string') {
+        if (src.startsWith('data:')) {
+            return { data: src.split(',')[1], mimeType: src.substring(src.indexOf(':') + 1, src.indexOf(';')) };
+        }
+        const response = await fetch(src);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve({ data: (reader.result as string).split(',')[1], mimeType: blob.type });
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } else {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve({ data: (reader.result as string).split(',')[1], mimeType: src.type });
+            reader.onerror = reject;
+            reader.readAsDataURL(src);
+        });
     }
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve({ data: (reader.result as string).split(',')[1], mimeType: blob.type });
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-  } else {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve({ data: (reader.result as string).split(',')[1], mimeType: src.type });
-        reader.onerror = reject;
-        reader.readAsDataURL(src);
-    });
-  }
 };
 
 export const analyzeVisualContext = async (images: string[]): Promise<string> => {
@@ -70,9 +70,9 @@ export const analyzeVisualContext = async (images: string[]): Promise<string> =>
         }
         parts.push({ text: "Describe every technical detail: lighting, material texture, background geometry, and surface properties. Do not assume categories. Use only what is visible." });
         // Use gemini-3-flash-preview for text-based analysis of visual parts
-        const response = await ai.models.generateContent({ 
-            model: 'gemini-3-flash-preview', 
-            contents: { parts } 
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: { parts }
         });
         return response.text || "";
     } catch (e) { return ""; }
@@ -80,7 +80,7 @@ export const analyzeVisualContext = async (images: string[]): Promise<string> =>
 
 export const generateNanoImage = async (userPrompt: string, aspectRatio: string = "1:1", referenceImages: any = null, quality: string = "Pro", shotModifier: string = ""): Promise<string> => {
     const isElite = quality === 'Elite';
-    
+
     // Check key selection for elite models
     if (isElite) {
         const hasKey = await (window as any).aistudio.hasSelectedApiKey();
@@ -115,7 +115,7 @@ export const generateNanoImage = async (userPrompt: string, aspectRatio: string 
     Strictly follow the material properties in the anchor images. If it is a cosmetic product, render as high-end cosmetic photography. If tech, render as tech photography. NEVER hallucinate cloth or sport textures.
     `;
     parts.push({ text: finalPrompt.trim() });
-    
+
     try {
         const response = await ai.models.generateContent({
             model: isElite ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
@@ -140,9 +140,9 @@ export const describeImage = async (img: string) => {
     const ai = getAI();
     const p = await prepareImageForAi(img);
     // Use gemini-3-flash-preview for text description tasks
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: { parts: [ { inlineData: p }, { text: "Provide a raw technical description of materials, surfaces, and lighting." } ] } 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: { parts: [{ inlineData: p }, { text: "Provide a raw technical description of materials, surfaces, and lighting." }] }
     });
     return r.text || "";
 };
@@ -150,13 +150,13 @@ export const describeImage = async (img: string) => {
 export const generateStoryScenes = async (c: string, n: number) => {
     const ai = getAI();
     // Use gemini-3-flash-preview for text-based storyboard generation
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `Generate ${n} cinematic storyboard scenes for: ${c}. Focus on material fidelity. JSON array of strings.`,
-        config: { 
-          responseMimeType: "application/json", 
-          // @ts-ignore
-          responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } 
+        config: {
+            responseMimeType: "application/json",
+            // @ts-ignore
+            responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
     });
     return JSON.parse(r.text || "[]");
@@ -165,10 +165,10 @@ export const generateStoryScenes = async (c: string, n: number) => {
 export const generateVideoScript = async (story: string, n: number) => {
     const ai = getAI();
     // Use gemini-3-flash-preview for text-based script generation
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `Generate ${n}-clip video script: ${story}. JSON array of objects with "prompt".`,
-        config: { 
+        config: {
             responseMimeType: "application/json",
             // @ts-ignore
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING } }, required: ["prompt"] } }
@@ -185,9 +185,9 @@ export const generatePodcastScene = async (f: string, t: string, d: string) => {
 export const enrichCinematicPrompt = async (c: string) => {
     const ai = getAI();
     // Use gemini-3-flash-preview for prompt enrichment
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: `Enrich this cinematic concept. Focus on material texture and environmental lighting: "${c}".` 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Enrich this cinematic concept. Focus on material texture and environmental lighting: "${c}".`
     });
     return r.text || c;
 };
@@ -195,10 +195,10 @@ export const enrichCinematicPrompt = async (c: string) => {
 export const expandPrompt = async (p: string) => {
     const ai = getAI();
     // Use gemini-3-flash-preview for text-based expansion
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: p, 
-        config: { systemInstruction: "You are a prompt engineer. Expand the user's brief instruction into a detailed technical prompt." } 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: p,
+        config: { systemInstruction: "You are a prompt engineer. Expand the user's brief instruction into a detailed technical prompt." }
     });
     return r.text || p;
 };
@@ -211,13 +211,13 @@ export const generateCinematicBatch = async (p: string, m: string, ar: string = 
 export const suggestExpansionAngles = async (e: string[]) => {
     const ai = getAI();
     // Use gemini-3-flash-preview for text-based brainstorming
-    const r = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
+    const r = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `Suggest 8 diverse cinematic camera angles. current: ${e.join(', ')}. JSON array of strings.`,
-        config: { 
-          responseMimeType: "application/json", 
-          // @ts-ignore
-          responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } 
+        config: {
+            responseMimeType: "application/json",
+            // @ts-ignore
+            responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
     });
     return JSON.parse(r.text || "[]");

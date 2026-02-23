@@ -9,7 +9,7 @@ interface CanvasPreviewProps {
     scale: number;
     onUpdate: (config: AppConfig, save?: boolean) => void;
     selectedIds: string[];
-    onSelect: (id: string | null, multi?: boolean) => void;
+    onSelect: (id: string | string[] | null, multi?: boolean) => void;
     readOnly?: boolean;
     hideControls?: boolean;
     domId?: string;
@@ -25,7 +25,7 @@ const hexToRgba = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
         let hex = color.substring(1);
         if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-        if (hex.length !== 6) return `rgba(0,0,0,${safeAlpha})`; 
+        if (hex.length !== 6) return `rgba(0,0,0,${safeAlpha})`;
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
@@ -44,7 +44,7 @@ const hexToRgba = (color: string, alpha: number) => {
 const getEffectsStyle = (effects?: LayerEffects) => {
     if (!effects) return 'none';
     const { blur, brightness, contrast, saturate, hueRotate, grayscale, invert, sepia, dropShadowX, dropShadowY, dropShadowBlur, dropShadowColor, dropShadowOpacity } = effects;
-    
+
     const filterList = [
         blur > 0 ? `blur(${blur}px)` : '',
         brightness !== 1 ? `brightness(${brightness})` : '',
@@ -54,8 +54,8 @@ const getEffectsStyle = (effects?: LayerEffects) => {
         grayscale > 0 ? `grayscale(${grayscale})` : '',
         invert > 0 ? `invert(${invert})` : '',
         sepia > 0 ? `sepia(${sepia})` : '',
-        (dropShadowBlur > 0 || Math.abs(dropShadowX) > 0 || Math.abs(dropShadowY) > 0) 
-            ? `drop-shadow(${dropShadowX}px ${dropShadowY}px ${dropShadowBlur}px ${hexToRgba(dropShadowColor, dropShadowOpacity ?? 0.5)})` 
+        (dropShadowBlur > 0 || Math.abs(dropShadowX) > 0 || Math.abs(dropShadowY) > 0)
+            ? `drop-shadow(${dropShadowX}px ${dropShadowY}px ${dropShadowBlur}px ${hexToRgba(dropShadowColor, dropShadowOpacity ?? 0.5)})`
             : ''
     ].filter(Boolean).join(' ');
 
@@ -73,7 +73,7 @@ const getFontStyle = (fontString: string) => {
 
 const getBackgroundPatternStyle = (pattern: string, color: string = 'rgba(0,0,0,0.1)', opacity: number = 0.1) => {
     if (!pattern || pattern === 'none') return {};
-    const c = color.startsWith('#') ? hexToRgba(color, opacity) : color; 
+    const c = color.startsWith('#') ? hexToRgba(color, opacity) : color;
     let backgroundImage = '';
     let backgroundSize = '';
     switch (pattern) {
@@ -132,16 +132,16 @@ const getBoundingBox = (ids: string[], layers: any[]) => {
 }
 
 // --- GLASS OVERLAY COMPONENT (Optimized) ---
-const GlassOverlay = React.memo(({ 
-    shape, 
-    canvasConfig, 
+const GlassOverlay = React.memo(({
+    shape,
+    canvasConfig,
     blurAmount,
     tintColor,
     tintOpacity,
     isActive,
     isInteracting
-}: { 
-    shape: ShapeLayer, 
+}: {
+    shape: ShapeLayer,
     canvasConfig: AppConfig['canvas'],
     blurAmount: number,
     tintColor: string,
@@ -152,26 +152,26 @@ const GlassOverlay = React.memo(({
     const bgBase = canvasConfig.background_gradient_enabled
         ? `linear-gradient(${canvasConfig.background_gradient_deg}deg, ${canvasConfig.background_gradient_start}, ${canvasConfig.background_gradient_end})`
         : canvasConfig.background_color;
-    
+
     // OPTIMIZATION: Disable heavy backdrop filters during drag
     if (!isActive || isInteracting) {
         return (
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ pointerEvents: 'none' }}>
-                <div 
-                    className="absolute inset-0" 
-                    style={{ 
-                        backgroundColor: tintColor, 
-                        opacity: Math.min(1, tintOpacity + 0.3), 
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backgroundColor: tintColor,
+                        opacity: Math.min(1, tintOpacity + 0.3),
                         mixBlendMode: shape.blend_mode as any || 'normal'
-                    }} 
+                    }}
                 />
             </div>
         );
     }
 
     const patternStyle = getBackgroundPatternStyle(
-        canvasConfig.background_pattern, 
-        canvasConfig.background_pattern_color, 
+        canvasConfig.background_pattern,
+        canvasConfig.background_pattern_color,
         canvasConfig.background_pattern_opacity
     );
 
@@ -179,7 +179,7 @@ const GlassOverlay = React.memo(({
 
     return (
         <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ pointerEvents: 'none' }}>
-            <div 
+            <div
                 style={{
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
@@ -190,7 +190,7 @@ const GlassOverlay = React.memo(({
                     justifyContent: 'center',
                 }}
             >
-                <div 
+                <div
                     style={{
                         position: 'absolute',
                         width: canvasConfig.width,
@@ -203,19 +203,19 @@ const GlassOverlay = React.memo(({
                     }}
                 >
                     {bgImage && (
-                        <div 
-                            className="absolute inset-0" 
-                            style={{ 
-                                backgroundImage: bgImage, 
-                                backgroundSize: 'cover', 
+                        <div
+                            className="absolute inset-0"
+                            style={{
+                                backgroundImage: bgImage,
+                                backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 opacity: canvasConfig.background_layer_opacity ?? 1,
                                 filter: canvasConfig.background_layer_blur ? `blur(${canvasConfig.background_layer_blur}px)` : undefined
-                            }} 
+                            }}
                         />
                     )}
                     {patternStyle.backgroundImage && (
-                        <div 
+                        <div
                             className="absolute inset-0 z-0"
                             style={{
                                 ...patternStyle,
@@ -225,13 +225,13 @@ const GlassOverlay = React.memo(({
                     )}
                 </div>
             </div>
-            <div 
-                className="absolute inset-0" 
-                style={{ 
-                    backgroundColor: tintColor, 
+            <div
+                className="absolute inset-0"
+                style={{
+                    backgroundColor: tintColor,
                     opacity: tintOpacity,
                     mixBlendMode: shape.blend_mode as any || 'normal'
-                }} 
+                }}
             />
         </div>
     );
@@ -255,7 +255,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
     const [isEditing, setIsEditing] = useState(false);
     const { fontFamily, fontWeight } = getFontStyle(layer.font);
     const isGradient = layer.gradient_enabled;
-    const isFillEnabled = layer.fill_enabled !== false; 
+    const isFillEnabled = layer.fill_enabled !== false;
     const gradStart = layer.gradient_start || '#000000';
     const gradEnd = layer.gradient_end || '#3b82f6';
     const gradDeg = layer.gradient_deg ?? 90;
@@ -263,21 +263,21 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
     const resizeMode = layer.resize_mode || 'auto-width';
     const align = layer.alignment || 'center';
     const isWarped = layer.warp_type && layer.warp_type !== 'none';
-    
+
     const getWarpPath = (w: number, h: number) => {
         const type = layer.warp_type;
         const bendVal = (layer.warp_bend ?? 50) / 100;
         const midY = h / 2;
         if (type === 'circle') {
             if (Math.abs(bendVal) < 0.01) return `M 0,${midY} L ${w},${midY}`;
-            const s = Math.abs(w * 0.5 * bendVal); 
+            const s = Math.abs(w * 0.5 * bendVal);
             if (s < 1) return `M 0,${midY} L ${w},${midY}`;
-            const r = (s*s + (w/2)*(w/2)) / (2*s);
+            const r = (s * s + (w / 2) * (w / 2)) / (2 * s);
             const sweep = bendVal > 0 ? 0 : 1;
             return `M 0,${midY} A ${r},${r} 0 0,${sweep} ${w},${midY}`;
         }
         const distortion = w * 0.35 * bendVal;
-        if (type === 'arch') return `M 0,${midY} Q ${w/2},${midY - distortion * 1.5} ${w},${midY}`;
+        if (type === 'arch') return `M 0,${midY} Q ${w / 2},${midY - distortion * 1.5} ${w},${midY}`;
         if (type === 'wave') return `M 0,${midY} C ${w * 0.25},${midY - distortion} ${w * 0.75},${midY + distortion} ${w},${midY}`;
         return `M 0,${midY} L ${w},${midY}`;
     };
@@ -291,11 +291,11 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         backgroundSize: '100% 100%',
         display: 'inline-block',
         textAlign: align as any,
-    } : { 
+    } : {
         color: isFillEnabled ? layer.color : 'transparent',
         textAlign: align as any,
     };
-    
+
     const strokeStyle = layer.stroke_enabled ? `${layer.stroke_width ?? 1}px ${layer.stroke_color ?? '#000000'}` : undefined;
     const shadowStyle = layer.shadow_enabled ? `${layer.shadow_offset_x ?? 2}px ${layer.shadow_offset_y ?? 2}px ${layer.shadow_blur ?? 4}px ${layer.shadow_color ?? 'rgba(0,0,0,0.5)'}` : undefined;
 
@@ -322,7 +322,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         const rect = node.getBoundingClientRect();
         const measuredWidth = rect.width / scale;
         const measuredHeight = rect.height / scale;
-        const tolerance = 1; 
+        const tolerance = 1;
         if (resizeMode === 'auto-width') {
             if (Math.abs(measuredWidth - layer.width) > tolerance || Math.abs(measuredHeight - layer.height) > tolerance) {
                 setTimeout(() => onUpdate(layer.id, { width: measuredWidth, height: measuredHeight }, false), 0);
@@ -339,8 +339,8 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
 
     return (
         <Rnd
-            key={layer.id} 
-            size={{ width: layer.width, height: layer.height }} 
+            key={layer.id}
+            size={{ width: layer.width, height: layer.height }}
             position={{ x: layer.position_x, y: layer.position_y }}
             onDragStop={(e, d) => onUpdate(layer.id, { position_x: d.x, position_y: d.y }, true)}
             onResizeStop={(e, dir, ref, delta, pos) => {
@@ -350,9 +350,9 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
                 if (resizeMode === 'auto-width') updates.resize_mode = 'auto-height';
                 onUpdate(layer.id, updates, true);
             }}
-            disableDragging={disableInteraction || layer.locked || isEditing} 
+            disableDragging={disableInteraction || layer.locked || isEditing}
             enableResizing={!disableInteraction && !layer.locked && !isEditing}
-            style={{ zIndex: zIndex, pointerEvents: disableInteraction ? 'none' : 'auto', willChange: 'transform' }} 
+            style={{ zIndex: zIndex, pointerEvents: disableInteraction ? 'none' : 'auto', willChange: 'transform' }}
             scale={scale}
             onMouseDown={onSelect}
             className={`selectable-layer layer-node-${layer.id} ${disableInteraction ? 'pointer-events-none' : ''}`}
@@ -391,6 +391,8 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
     const { canvas, image_layers, additional_texts, shapes, layerOrder, groups } = config;
     const [draggingGuideId, setDraggingGuideId] = useState<string | null>(null);
     const [interactingId, setInteractingId] = useState<string | null>(null);
+    const [selectionMarquee, setSelectionMarquee] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+    const marqueeStartRef = useRef<{ x: number, y: number } | null>(null);
 
     const bgBase = canvas.background_gradient_enabled
         ? `linear-gradient(${canvas.background_gradient_deg}deg, ${canvas.background_gradient_start}, ${canvas.background_gradient_end})`
@@ -422,7 +424,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
             }
             setDraggingGuideId(null);
         };
-        window.addEventListener('mousemove', handleMove); 
+        window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
         return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
     }, [draggingGuideId, config, scale, onUpdate, domId, canvas]);
@@ -440,13 +442,83 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
     };
 
     const handleContainerMouseDown = (e: React.MouseEvent) => {
-        if (handToolActive) return; 
-        if (e.target === e.currentTarget && !readOnly) onSelect(null);
+        if (handToolActive) return;
+        if (e.target === e.currentTarget && !readOnly) {
+            onSelect(null);
+            // Start Marquee Selection
+            const container = document.getElementById(domId || '');
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / scale;
+                const y = (e.clientY - rect.top) / scale;
+                marqueeStartRef.current = { x, y };
+                setSelectionMarquee({ x, y, width: 0, height: 0 });
+            }
+        }
         onFocusCanvas?.();
     };
 
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!marqueeStartRef.current) return;
+            const container = document.getElementById(domId || '');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const currentX = (e.clientX - rect.left) / scale;
+            const currentY = (e.clientY - rect.top) / scale;
+
+            const x = Math.min(marqueeStartRef.current.x, currentX);
+            const y = Math.min(marqueeStartRef.current.y, currentY);
+            const width = Math.abs(marqueeStartRef.current.x - currentX);
+            const height = Math.abs(marqueeStartRef.current.y - currentY);
+
+            setSelectionMarquee({ x, y, width, height });
+        };
+
+        const handleMouseUp = (e: MouseEvent) => {
+            if (!marqueeStartRef.current || !selectionMarquee) {
+                marqueeStartRef.current = null;
+                setSelectionMarquee(null);
+                return;
+            }
+
+            const allLayers = [...image_layers, ...additional_texts, ...(shapes || [])];
+            const containedIds: string[] = [];
+
+            allLayers.forEach(l => {
+                const lRect = { x: l.position_x, y: l.position_y, w: l.width, h: l.height };
+                // Simple AABB intersection check: layer must be fully or partially inside marquee?
+                // Standard behavior is usually "contains" or "intersects". Let's do intersects.
+                const intersects = !(lRect.x > selectionMarquee.x + selectionMarquee.width ||
+                    lRect.x + lRect.w < selectionMarquee.x ||
+                    lRect.y > selectionMarquee.y + selectionMarquee.height ||
+                    lRect.y + lRect.h < selectionMarquee.y);
+
+                if (intersects && !l.hidden) {
+                    containedIds.push(l.id);
+                }
+            });
+
+            if (containedIds.length > 0) {
+                onSelect(containedIds);
+            }
+
+            marqueeStartRef.current = null;
+            setSelectionMarquee(null);
+        };
+
+        if (selectionMarquee) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [selectionMarquee, scale, domId, image_layers, additional_texts, shapes, onSelect]);
+
     const handleLayerMouseDown = (id: string, e: React.MouseEvent) => {
-        if (handToolActive) return; 
+        if (handToolActive) return;
         e.stopPropagation(); onFocusCanvas?.();
         if (readOnly) return;
         const parentGroup = groups?.find(g => g.layerIds.includes(id));
@@ -530,21 +602,21 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         const explicitLayerIds = selectedIds.filter(id => typeof id === 'string' && !id.startsWith('group-'));
         selectedIds.filter(id => typeof id === 'string' && id.startsWith('group-')).forEach(gid => {
             const g = groups?.find(grp => grp.id === gid);
-            if(g) explicitLayerIds.push(...g.layerIds);
+            if (g) explicitLayerIds.push(...g.layerIds);
         });
         multiSelectRect = getBoundingBox(explicitLayerIds, allLayers);
     }
 
     return (
-        <div 
-            id={domId} 
-            style={{ 
-                width: canvas.width, height: canvas.height, position: 'relative', overflow: 'hidden', 
+        <div
+            id={domId}
+            style={{
+                width: canvas.width, height: canvas.height, position: 'relative', overflow: 'hidden',
                 backgroundColor: canvas.background_color || '#ffffff',
                 transform: `scale(${scale})`, transformOrigin: 'top left',
                 filter: canvas.global_effects_enabled && !interactingId ? getEffectsStyle(canvas.global_effects) : undefined,
                 zIndex: 0, isolation: 'isolate', willChange: 'transform'
-            }} 
+            }}
             onMouseDown={handleContainerMouseDown}
             className={`relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'} ${handToolActive ? 'pointer-events-none' : 'cursor-default'}`}
         >
@@ -582,6 +654,18 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 <Rnd key="multi-select-box" size={{ width: multiSelectRect.width, height: multiSelectRect.height }} position={{ x: multiSelectRect.x, y: multiSelectRect.y }} onDragStop={(e, d) => handleBatchTransform({ x: d.x, y: d.y }, true)} onResizeStop={(e, dir, ref, delta, pos) => handleBatchTransform({ w: parseInt(ref.style.width), h: parseInt(ref.style.height), x: pos.x, y: pos.y }, false)} lockAspectRatio={true} style={{ zIndex: 99999, border: '1px dashed #818cf8', backgroundColor: 'rgba(99,102,241,0.05)' }} scale={scale} className="no-export"><div className="absolute -top-6 left-0 bg-indigo-600 text-white text-[8px] font-bold px-2 py-0.5 rounded-t-md shadow-md flex items-center gap-1 whitespace-nowrap"><span>{selectedIds.length} ITEMS SELECTED</span></div></Rnd>
             )}
 
+            {selectionMarquee && (
+                <div
+                    className="absolute border border-indigo-500 bg-indigo-500/10 z-[10000] pointer-events-none no-export"
+                    style={{
+                        left: selectionMarquee.x,
+                        top: selectionMarquee.y,
+                        width: selectionMarquee.width,
+                        height: selectionMarquee.height
+                    }}
+                />
+            )}
+
             {!hideControls && selectedGroupIds.map(groupId => {
                 const group = groups?.find(g => g.id === groupId);
                 if (!group) return null;
@@ -598,12 +682,12 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 const isGroupSelected = parentGroup && selectedIds.includes(parentGroup.id);
                 const isInteracting = interactingId === id;
                 const disableInteraction = readOnly || isGroupSelected || (isMultiSelection && isSelected) || handToolActive;
-                
-                const commonProps = { 
-                    scale: scale, 
-                    onMouseDown: (e: any) => handleLayerMouseDown(id, e), 
-                    cancel: ".no-drag", 
-                    className: `selectable-layer layer-node-${id} ${disableInteraction ? 'pointer-events-none' : ''}`,
+
+                const commonProps = {
+                    scale: scale,
+                    onMouseDown: (e: any) => handleLayerMouseDown(id, e),
+                    cancel: ".no-drag",
+                    className: `selectable-layer layer-node-${id} ${handToolActive ? 'pointer-events-none' : ''}`,
                     onDragStart: () => setInteractingId(id),
                     onResizeStart: () => setInteractingId(id),
                     onDragStop: (e: any, d: any) => { setInteractingId(null); updateLayer(id, { position_x: d.x, position_y: d.y }, true); },
@@ -640,18 +724,18 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     let clipPath = undefined;
                     if (shape.shape_type === 'triangle') clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
                     if (shape.shape_type === 'star') clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
-                    
+
                     let finalFilter = shape.effects_enabled && !isInteracting ? getEffectsStyle(shape.effects) : '';
                     let finalBoxShadow = isInteracting ? undefined : shadowStyle;
                     if ((shape.shape_type === 'triangle' || shape.shape_type === 'star') && finalBoxShadow) {
-                        finalBoxShadow = undefined; 
+                        finalBoxShadow = undefined;
                         const ds = `drop-shadow(${shape.shadow_x ?? 0}px ${shape.shadow_y ?? 0}px ${shape.shadow_blur ?? 0}px ${shape.shadow_color ?? 'rgba(0,0,0,0.5)'})`;
                         finalFilter = `${finalFilter} ${ds}`.trim();
                     }
-                    if (!finalFilter) finalFilter = undefined;
+                    if (!finalFilter) finalFilter = '';
 
                     return (
-                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', willChange: 'transform' }} {...commonProps}>
+                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', position: 'relative', transform: `rotate(${shape.rotation}deg)`, transformOrigin: 'center center' }}>
                                 {isGlassMode ? (
                                     <div style={{ position: 'absolute', inset: 0, borderRadius: borderRadius, boxShadow: finalBoxShadow, clipPath: clipPath, overflow: 'hidden' }}>
@@ -660,7 +744,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                                 ) : (
                                     <div style={{ position: 'absolute', inset: 0, backgroundColor: shouldApplyContainerBg ? finalFill : (isLine ? shape.stroke_color : undefined), backgroundImage: shouldApplyContainerBg ? finalGradient : undefined, opacity: layerOpacity, borderRadius, filter: finalFilter, boxShadow: finalBoxShadow, clipPath: clipPath, mixBlendMode: shape.blend_mode as any, transform: 'translate3d(0,0,0)', }} className="layer-content" />
                                 )}
-                                {!isLine && shape.stroke_width > 0 && <div style={{ position: 'absolute', inset: 0, border: `${shape.stroke_width}px solid ${shape.stroke_color}`, borderRadius, clipPath: clipPath, pointerEvents: 'none' }}/>}
+                                {!isLine && shape.stroke_width > 0 && <div style={{ position: 'absolute', inset: 0, border: `${shape.stroke_width}px solid ${shape.stroke_color}`, borderRadius, clipPath: clipPath, pointerEvents: 'none' }} />}
                                 {isSelected && !hideControls && !isGroupSelected && !isMultiSelection && <div className="absolute inset-0 border-2 border-indigo-500 pointer-events-none no-export" style={{ borderRadius }} />}
                             </div>
                         </Rnd>
@@ -672,20 +756,20 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     const maskScale = img.mask_content_scale ?? 1;
                     const maskX = img.mask_content_x ?? 0;
                     const maskY = img.mask_content_y ?? 0;
-                    const maskStyle = img.mask_enabled && img.mask_src ? { 
-                        maskImage: `url("${img.mask_src}")`, 
-                        WebkitMaskImage: `url("${img.mask_src}")`, 
+                    const maskStyle = img.mask_enabled && img.mask_src ? {
+                        maskImage: `url("${img.mask_src}")`,
+                        WebkitMaskImage: `url("${img.mask_src}")`,
                         maskSize: `${maskScale * 100}% ${maskScale * 100}%`,
-                        WebkitMaskSize: `${maskScale * 100}% ${maskScale * 100}%`, 
-                        maskPosition: `${50 + maskX}% ${50 + maskY}%`, 
-                        WebkitMaskPosition: `${50 + maskX}% ${50 + maskY}%`, 
+                        WebkitMaskSize: `${maskScale * 100}% ${maskScale * 100}%`,
+                        maskPosition: `${50 + maskX}% ${50 + maskY}%`,
+                        WebkitMaskPosition: `${50 + maskX}% ${50 + maskY}%`,
                         maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
                         maskOrigin: 'border-box', WebkitMaskOrigin: 'border-box',
                         maskClip: 'border-box', WebkitMaskClip: 'border-box',
                         maskMode: 'alpha', WebkitMaskMode: 'alpha'
                     } : {};
                     return (
-                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', willChange: 'transform' }} {...commonProps}>
+                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', transform: `rotate(${img.rotation}deg)`, transformOrigin: 'center center' }}>
                                 <div style={{ width: '100%', height: '100%', opacity: img.opacity, mixBlendMode: img.blend_mode as any }}>
                                     <div style={{ width: '100%', height: '100%', ...maskStyle }}>

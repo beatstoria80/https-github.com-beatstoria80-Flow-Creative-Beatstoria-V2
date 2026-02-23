@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    X, Plus, Database, Cpu, MessageSquare, Sparkles, 
-    Loader2, Trash2, History, Send, Link as LinkIcon, 
+import {
+    X, Plus, Database, Cpu, MessageSquare, Sparkles,
+    Loader2, Trash2, History, Send, Link as LinkIcon,
     Microscope, Tag, ArrowRight, CheckCircle2, Layout,
     FileIcon, FileText, ImageIcon, Globe2, Table, ChevronRight,
     CircleDashed, Workflow, BarChart4, Briefcase, GraduationCap,
@@ -45,7 +45,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
     const [analysisQuery, setAnalysisQuery] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [activeAnalysisMode, setActiveAnalysisMode] = useState<string | null>(null);
-    
+
     // CHAIN REACTION STATE (3 RESPONSES)
     const [responseChain, setResponseChain] = useState<AnalysisChainItem[]>([
         { id: 0, title: "RESPONS 1: ANALISA DATA & KONTEKS", content: "", isTyping: false, isEditing: true, status: 'idle' },
@@ -53,7 +53,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
         { id: 2, title: "RESPONS 3: PROYEKSI & VALUASI", content: "", isTyping: false, isEditing: true, status: 'idle' }
     ]);
 
-    const [cacheHistory, setCacheHistory] = useState<{id: string, text: string, time: number}[]>([]);
+    const [cacheHistory, setCacheHistory] = useState<{ id: string, text: string, time: number }[]>([]);
     const [taggedIndices, setTaggedIndices] = useState<Set<number>>(new Set());
     const [taggedSources, setTaggedSources] = useState<TaggedData[]>([]);
     const [exportMenuOpen, setExportMenuOpen] = useState<number | null>(null);
@@ -75,18 +75,18 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
 
     const handleAnalisaNode = async () => {
         if (!analysisQuery.trim() || isAnalyzing) return;
-        
+
         setIsAnalyzing(true);
         setResponseChain(prev => prev.map(item => ({ ...item, content: "", status: 'idle', sources: undefined })));
         setTaggedIndices(new Set());
-        
+
         updateChainItem(0, { status: 'generating', isTyping: true });
 
         try {
             // Updated GoogleGenAI initialization
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
             const contextText = documents.map(d => `[FILE: ${d.title}]\n${d.content.substring(0, 20000)}`).join('\n\n');
-            
+
             const systemPrompt = `
             ROLE: Senior Strategic Research Lead (Space NoteLM).
             TASK: EXPAND the data provided in documents based on user query: "${analysisQuery}".
@@ -110,15 +110,15 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                     tools: [{ googleSearch: {} }],
                 }
             });
-            
+
             const text = response.text || "Analisa tidak menghasilkan output.";
-            updateChainItem(0, { 
-                content: text, 
-                status: 'done', 
+            updateChainItem(0, {
+                content: text,
+                status: 'done',
                 isTyping: false,
                 sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks
             });
-            setCacheHistory(prev => [{id: `hist-${Date.now()}`, text: text, time: Date.now()}, ...prev]);
+            setCacheHistory(prev => [{ id: `hist-${Date.now()}`, text: text, time: Date.now() }, ...prev]);
 
         } catch (e: any) {
             updateChainItem(0, { content: `ERROR: ${e.message}`, status: 'error', isTyping: false });
@@ -131,12 +131,12 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
         if (sourceIndex >= 2) return;
         const targetIndex = sourceIndex + 1;
         const sourceItem = responseChain[sourceIndex];
-        
+
         updateChainItem(targetIndex, { status: 'generating', isTyping: true, content: "" });
 
         try {
             // Updated GoogleGenAI initialization
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
             const chainPrompt = `
             PROTOCOL: NARRATIVE CHAIN STAGE ${targetIndex + 1}
             PREVIOUS CONTEXT:
@@ -154,9 +154,9 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                 config: { tools: [{ googleSearch: {} }] }
             });
 
-            updateChainItem(targetIndex, { 
-                content: response.text || "Chain reaction fault.", 
-                status: 'done', 
+            updateChainItem(targetIndex, {
+                content: response.text || "Chain reaction fault.",
+                status: 'done',
                 isTyping: false,
                 sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks
             });
@@ -171,7 +171,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
     };
 
     const handleClearResponse = (index: number) => {
-        if(window.confirm("Clear this node?")) {
+        if (window.confirm("Clear this node?")) {
             updateChainItem(index, { content: "", status: 'idle', sources: undefined });
         }
     };
@@ -202,7 +202,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                         <div className="w-1.5 h-1.5 rounded-none bg-indigo-500 animate-ping"></div>
                         <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{documents.length} NODES</span>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-none text-slate-400 hover:text-white transition-all"><X size={22}/></button>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-none text-slate-400 hover:text-white transition-all"><X size={22} /></button>
                 </div>
             </div>
 
@@ -214,19 +214,19 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                                 <Globe size={14} />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">REPOSITORI</span>
                             </div>
-                            <button onClick={onUpload} className="w-10 h-10 bg-orange-600 rounded-none flex items-center justify-center text-white shadow-xl hover:bg-orange-500 transition-all active:scale-95"><Plus size={18} strokeWidth={4}/></button>
+                            <button onClick={onUpload} className="w-10 h-10 bg-orange-600 rounded-none flex items-center justify-center text-white shadow-xl hover:bg-orange-500 transition-all active:scale-95"><Plus size={18} strokeWidth={4} /></button>
                         </div>
                         <div className="flex-1 bg-black/40 border border-white/5 rounded-none p-4 flex flex-col gap-3 overflow-hidden shadow-inner">
                             <div className="flex-1 overflow-y-auto hide-scrollbar space-y-2">
                                 {documents.map(doc => (
                                     <div key={doc.id} className="group flex items-center gap-3 p-4 bg-white/5 border border-white/5 rounded-none hover:border-orange-500/40 transition-all cursor-default">
                                         <div className="w-9 h-9 rounded-none flex items-center justify-center border border-white/5 bg-black shrink-0">
-                                            {doc.type === 'pdf' ? <FileIcon size={16} /> : (doc.type === 'image' ? <ImageIcon size={16}/> : (doc.type === 'web' ? <Globe2 size={16} className="text-orange-500" /> : <FileText size={16} />))}
+                                            {doc.type === 'pdf' ? <FileIcon size={16} /> : (doc.type === 'image' ? <ImageIcon size={16} /> : (doc.type === 'web' ? <Globe2 size={16} className="text-orange-500" /> : <FileText size={16} />))}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <span className="text-[10px] font-black uppercase truncate block text-slate-300">{doc.title}</span>
                                         </div>
-                                        <button onClick={() => onDeleteDoc(doc.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-500 transition-all"><Trash2 size={14}/></button>
+                                        <button onClick={() => onDeleteDoc(doc.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
                                     </div>
                                 ))}
                             </div>
@@ -253,7 +253,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                                                 <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">SINTESIS NEURAL...</span>
                                             </div>
                                         ) : (
-                                            <textarea 
+                                            <textarea
                                                 value={item.content}
                                                 onChange={(e) => updateChainItem(idx, { content: e.target.value })}
                                                 className="w-full h-full bg-transparent border-none p-6 text-[11px] font-medium leading-relaxed text-slate-300 outline-none focus:bg-white/5 transition-all resize-none rounded-none custom-scrollbar"
@@ -279,15 +279,15 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
                         <div className="px-6 py-3 border-t border-white/5 bg-black shrink-0 flex flex-col gap-2 z-40 relative">
                             <div className="flex items-center gap-4">
                                 <div className={`flex-1 flex items-center border rounded-none p-1 transition-all shadow-2xl border-white/10 focus-within:border-indigo-500/40 bg-[#0a0a0a]`}>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         value={analysisQuery}
                                         onChange={(e) => setAnalysisQuery(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleAnalisaNode()}
                                         placeholder="Ketik topik riset atau instruksi spesifik..."
                                         className="flex-1 bg-transparent border-none text-[12px] font-bold px-4 py-2.5 focus:ring-0 outline-none text-white placeholder:text-slate-700 h-10"
                                     />
-                                    <button 
+                                    <button
                                         onClick={handleAnalisaNode}
                                         disabled={isAnalyzing || !analysisQuery.trim()}
                                         className={`px-8 h-10 border rounded-none font-black text-[10px] uppercase transition-all active:scale-[0.97] disabled:opacity-30 flex items-center gap-2 ${isAnalyzing ? 'bg-indigo-600/10 border-indigo-500/20' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-orange-600 hover:text-white'}`}
