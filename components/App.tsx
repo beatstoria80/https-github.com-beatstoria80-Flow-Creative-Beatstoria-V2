@@ -85,6 +85,7 @@ interface AppState {
 }
 
 export const App: React.FC = () => {
+    console.log("NEURAL BOOT: App component function executing...");
     const [showLanding, setShowLanding] = useState(true);
     const [isInitializing, setIsInitializing] = useState(true);
     const [currentProjectId, setCurrentProjectId] = useState<string>(() => localStorage.getItem('last_active_project_id') || 'page-default');
