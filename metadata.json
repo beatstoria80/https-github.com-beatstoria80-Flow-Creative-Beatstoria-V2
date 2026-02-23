@@ -1,0 +1,7 @@
+{
+  "name": "Master Space Studio Pro 26.0 | Beatstoria AI",
+  "description": "Universal Neural Design System for high-fidelity visual production and creative campaigns.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
