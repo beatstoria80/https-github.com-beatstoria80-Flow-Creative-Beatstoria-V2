@@ -1,11 +1,4 @@
-
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { EditorControls } from './editor/EditorControls';
-import CanvasPreview from './CanvasPreview';
-import { BeatstoriaStudio } from './BeatstoriaStudio';
-import { LandingPage } from './LandingPage';
-import { NewProjectFlow } from './editor/NewProjectFlow';
-import { SidebarMenu } from './SidebarMenu';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { DEFAULT_CONFIG, DEFAULT_EFFECTS } from '../constants';
 import { AppConfig, ChatMessage, ImageLayer, StashAsset } from '../types';
 import {
@@ -24,23 +17,32 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { saveProjectToDB, getAllProjectsFromDB, deleteProjectFromDB, getProjectByIdFromDB, clearAllProjectsFromDB } from '../services/storageService';
-import { AssistantPanel } from './editor/AssistantPanel';
-import { NeuralPurgeStudio } from './studio/NeuralPurgeStudio';
-import { NanoBananaStudio } from './studio/NanoBananaStudio';
-import { NanoBananaGen } from './studio/NanoBananaGen';
-import { NeuralRetouchStudio } from './studio/NeuralRetouchStudio';
-import { TitanFillStudio } from './studio/TitanFillStudio';
-import { StoryCampaignFlow } from './studio/StoryCampaignFlow';
-import { NeuralTypefaceStudio } from './studio/NeuralTypefaceStudio';
-import { VeoCineStudio } from './studio/VeoCineStudio';
-import { NoteLMStudio } from './studio/NoteLMStudio';
-import { VoiceStudio } from './studio/VoiceStudio';
-import { SpaceCampaignStudio } from './studio/SpaceCampaignStudio';
-import { CinematicDirectorStudio } from './studio/CinematicDirectorStudio';
-import { PodcastStudio } from './studio/PodcastStudio';
-import { ExportModal } from './editor/ExportModal';
 import { exportArtboard, downloadBlob } from '../services/exportService';
 import { Rnd } from 'react-rnd';
+
+// Lazy loaded components
+const CanvasPreview = React.lazy(() => import('./CanvasPreview'));
+const SidebarMenu = React.lazy(() => import('./SidebarMenu').then(m => ({ default: m.SidebarMenu })));
+const LandingPage = React.lazy(() => import('./LandingPage').then(m => ({ default: m.LandingPage })));
+const EditorControls = React.lazy(() => import('./editor/EditorControls').then(m => ({ default: m.EditorControls })));
+const BeatstoriaStudio = React.lazy(() => import('./BeatstoriaStudio').then(m => ({ default: m.BeatstoriaStudio })));
+const NewProjectFlow = React.lazy(() => import('./editor/NewProjectFlow').then(m => ({ default: m.NewProjectFlow })));
+const AssistantPanel = React.lazy(() => import('./editor/AssistantPanel').then(m => ({ default: m.AssistantPanel })));
+const ExportModal = React.lazy(() => import('./editor/ExportModal').then(m => ({ default: m.ExportModal })));
+
+const NeuralPurgeStudio = React.lazy(() => import('./studio/NeuralPurgeStudio').then(m => ({ default: m.NeuralPurgeStudio })));
+const NanoBananaStudio = React.lazy(() => import('./studio/NanoBananaStudio').then(m => ({ default: m.NanoBananaStudio })));
+const NanoBananaGen = React.lazy(() => import('./studio/NanoBananaGen').then(m => ({ default: m.NanoBananaGen })));
+const NeuralRetouchStudio = React.lazy(() => import('./studio/NeuralRetouchStudio').then(m => ({ default: m.NeuralRetouchStudio })));
+const TitanFillStudio = React.lazy(() => import('./studio/TitanFillStudio').then(m => ({ default: m.TitanFillStudio })));
+const StoryCampaignFlow = React.lazy(() => import('./studio/StoryCampaignFlow').then(m => ({ default: m.StoryCampaignFlow })));
+const NeuralTypefaceStudio = React.lazy(() => import('./studio/NeuralTypefaceStudio').then(m => ({ default: m.NeuralTypefaceStudio })));
+const VeoCineStudio = React.lazy(() => import('./studio/VeoCineStudio').then(m => ({ default: m.VeoCineStudio })));
+const NoteLMStudio = React.lazy(() => import('./studio/NoteLMStudio').then(m => ({ default: m.NoteLMStudio })));
+const VoiceStudio = React.lazy(() => import('./studio/VoiceStudio').then(m => ({ default: m.VoiceStudio })));
+const SpaceCampaignStudio = React.lazy(() => import('./studio/SpaceCampaignStudio').then(m => ({ default: m.SpaceCampaignStudio })));
+const CinematicDirectorStudio = React.lazy(() => import('./studio/CinematicDirectorStudio').then(m => ({ default: m.CinematicDirectorStudio })));
+const PodcastStudio = React.lazy(() => import('./studio/PodcastStudio').then(m => ({ default: m.PodcastStudio })));
 
 const deepCopy = <T,>(obj: T): T => {
     try {
@@ -94,9 +96,11 @@ export const App: React.FC = () => {
         return (localStorage.getItem('space_studio_theme') as 'dark' | 'light') || 'light';
     });
 
-    const [appState, setAppState] = useState<AppState>({
-        history: [{ pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }],
-        index: 0
+    const [appState, setAppState] = useState<AppState>(() => {
+        return {
+            history: [{ pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }],
+            index: 0
+        };
     });
 
     const [zoom, setZoom] = useState(0.45);
@@ -688,224 +692,226 @@ export const App: React.FC = () => {
 
     if (isInitializing) return <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white"><Loader2 className="animate-spin mb-4" size={40} /><span className="text-[10px] font-black uppercase tracking-[0.3em]">Memulihkan Sesi Neural...</span></div>;
 
-    if (showLanding) return (
-        <LandingPage
-            onStart={() => setShowLanding(false)}
-            onOpenAiStudio={() => { setShowLanding(false); setIsGenOpen(true); }}
-            onLoadProject={handleLoadProject}
-            onOpenCooking={() => { setShowLanding(false); setIsGenOpen(true); }}
-            onOpenTitanFill={() => { setShowLanding(false); setIsTitanFillOpen(true); }}
-            onOpenPurgeBg={() => { setShowLanding(false); setIsPurgeOpen(true); }}
-            onOpenRetouch={() => { setShowLanding(false); setIsRetouchOpen(true); }}
-            onOpenNoteLM={() => { setShowLanding(false); setIsNoteLMOpen(true); }}
-            onOpenCineEngine={() => { setShowLanding(false); setIsCineOpen(true); }}
-            onOpenTypeface={() => { setShowLanding(false); setIsTypefaceStudioOpen(true); }}
-            onOpenVoiceStudio={() => { setShowLanding(false); setIsVoiceStudioOpen(true); }}
-            onOpenSpaceCampaign={() => { setShowLanding(false); setIsSpaceCampaignOpen(true); }}
-            onOpenCinematicDirector={() => { setShowLanding(false); setIsCinematicDirectorOpen(true); }}
-        />
-    );
-
     return (
-        <div className={`flex h-screen w-screen relative transition-colors duration-500 overflow-hidden font-sans ${theme === 'dark' ? 'bg-[#050505] text-slate-200' : 'bg-slate-50 text-slate-900'}`} tabIndex={-1}>
-            <SidebarMenu
-                isOpen={isBackendMenuOpen} onClose={() => setIsBackendMenuOpen(false)} config={activePageConfig} onUpdateConfig={setConfig}
-                onNew={handleCreateProject} onImport={handleImportProject} onSave={() => { }} isSaving={isAutoSaving} saveSuccess={false} projectLibrary={projectLibrary} currentProjectId={currentProjectId}
-                onLoadProject={handleLoadProject} onDeleteProject={handleDeleteProject} onPurgeAll={handlePurgeAllProjects}
-            />
-            <NewProjectFlow isOpen={showNewProjectFlow} onClose={() => setShowNewProjectFlow(false)} onConfirm={handleCreateProject} />
-
-            <div
-                className={`flex-shrink-0 h-full border-r z-[100] shadow-2xl overflow-hidden transition-[width] duration-300 ease-in-out relative ${isSidebarOpen ? 'w-[340px]' : 'w-0 border-none'} ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}
-            >
-                <div className="w-[340px] h-full bg-white dark:bg-black">
-                    <EditorControls
-                        config={activePageConfig} setConfig={setConfig} selectedId={selectedIds.length === 1 ? selectedIds[0] : null} selectedIds={selectedIds} onSelectLayer={handleSelection}
-                        collapsed={false} onExpand={() => setIsSidebarOpen(true)} onHome={() => setIsBackendMenuOpen(true)} penToolMode={penToolMode as any} setPenToolMode={setPenToolMode as any}
-                        isAssistantOpen={isAssistantOpen} onToggleAssistant={() => setIsAssistantOpen(!isAssistantOpen)} isBackendMenuOpen={isBackendMenuOpen} setIsBackendMenuOpen={setIsBackendMenuOpen} onNewProject={() => setShowNewProjectFlow(true)}
-                        isAutoSaving={isAutoSaving} lastSaved={lastSaved}
-                        onOpenBgRemover={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
-                        onOpenNanoUpscaler={(src) => { setActiveHubContext(src || null); setIsUpscaleOpen(true); }}
-                        onOpenNanoGen={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
-                        onOpenRetouch={(src) => { setActiveHubContext(src || null); setIsRetouchOpen(true); }}
-                        onOpenTitanFill={(src) => { setActiveHubContext(src || null); setIsTitanFillOpen(true); }}
-                        onOpenNoteLM={() => setIsNoteLMOpen(true)}
-                        onOpenVoiceStudio={() => setIsVoiceStudioOpen(true)}
-                        onOpenCineEngine={() => setIsCineOpen(true)}
-                        onOpenTypefaceStudio={() => setIsTypefaceStudioOpen(true)}
-                        onOpenSpaceCampaign={() => setIsSpaceCampaignOpen(true)}
-                        onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={() => { }}
+        <Suspense fallback={<div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white"><Loader2 className="animate-spin mb-4" size={40} /><span className="text-[10px] font-black uppercase tracking-[0.3em]">SINKRONISASI MODUL...</span></div>}>
+            {showLanding ? (
+                <LandingPage
+                    onStart={() => setShowLanding(false)}
+                    onOpenAiStudio={() => { setShowLanding(false); setIsGenOpen(true); }}
+                    onLoadProject={handleLoadProject}
+                    onOpenCooking={() => { setShowLanding(false); setIsGenOpen(true); }}
+                    onOpenTitanFill={() => { setShowLanding(false); setIsTitanFillOpen(true); }}
+                    onOpenPurgeBg={() => { setShowLanding(false); setIsPurgeOpen(true); }}
+                    onOpenRetouch={() => { setShowLanding(false); setIsRetouchOpen(true); }}
+                    onOpenNoteLM={() => { setShowLanding(false); setIsNoteLMOpen(true); }}
+                    onOpenCineEngine={() => { setShowLanding(false); setIsCineOpen(true); }}
+                    onOpenTypeface={() => { setShowLanding(false); setIsTypefaceStudioOpen(true); }}
+                    onOpenVoiceStudio={() => { setShowLanding(false); setIsVoiceStudioOpen(true); }}
+                    onOpenSpaceCampaign={() => { setShowLanding(false); setIsSpaceCampaignOpen(true); }}
+                    onOpenCinematicDirector={() => { setShowLanding(false); setIsCinematicDirectorOpen(true); }}
+                />
+            ) : (
+                <div className={`flex h-screen w-screen relative transition-colors duration-500 overflow-hidden font-sans ${theme === 'dark' ? 'bg-[#050505] text-slate-200' : 'bg-slate-50 text-slate-900'}`} tabIndex={-1}>
+                    <SidebarMenu
+                        isOpen={isBackendMenuOpen} onClose={() => setIsBackendMenuOpen(false)} config={activePageConfig} onUpdateConfig={setConfig}
+                        onNew={handleCreateProject} onImport={handleImportProject} onSave={() => { }} isSaving={isAutoSaving} saveSuccess={false} projectLibrary={projectLibrary} currentProjectId={currentProjectId}
+                        onLoadProject={handleLoadProject} onDeleteProject={handleDeleteProject} onPurgeAll={handlePurgeAllProjects}
                     />
-                </div>
-            </div>
+                    <NewProjectFlow isOpen={showNewProjectFlow} onClose={() => setShowNewProjectFlow(false)} onConfirm={handleCreateProject} />
 
-            <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
-                <div className={`h-14 border-b flex items-center justify-between px-4 z-50 shadow-sm shrink-0 transition-colors ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-1">
-                        <button onClick={() => setShowLanding(true)} className={`p-2 hover:bg-opacity-10 rounded transition-colors ${theme === 'dark' ? 'text-slate-400 hover:bg-white' : 'text-gray-600 hover:bg-black'}`} title="Return to Landing Page"><Home size={18} /></button>
-
-                        <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
-                        <button onClick={handleUndo} disabled={appState.index === 0} className={`p-1.5 rounded disabled:opacity-20 transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}><Undo size={16} /></button>
-                        <button onClick={handleRedo} disabled={appState.index === appState.history.length - 1} className={`p-1.5 rounded disabled:opacity-20 transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}><Redo size={16} /></button>
-                        <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
-                        <div className={`flex items-center gap-1.5 border rounded-xl px-2 py-1 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-slate-100'}`}>
-                            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.05))} className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-white'}`}><Minus size={14} /></button>
-                            <span className={`text-[11px] font-black w-12 text-center ${theme === 'dark' ? 'text-slate-400' : 'text-slate-700'}`}>{Math.round(zoom * 100)}%</span>
-                            <button onClick={() => setZoom(Math.min(2, zoom + 0.05))} className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-white'}`}><Plus size={14} /></button>
-                        </div>
-                        <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
-                        <button onClick={() => setPenToolMode(penToolMode === 'hand' ? 'select' : 'hand')} className={`p-2 rounded transition-all ${penToolMode === 'hand' ? 'bg-indigo-600 text-white shadow-md' : (theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'hover:bg-gray-100 text-gray-600')}`}><Hand size={18} /></button>
-                        <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
-                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-2 rounded transition-all ${isSidebarOpen ? 'bg-indigo-600 text-white shadow-md' : (theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'hover:bg-gray-100 text-gray-600')}`} title="Toggle Sidebar"><PanelLeft size={18} /></button>
-                    </div>
-
-                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-6">
-                        <div className={`flex items-center gap-1 border p-1 rounded-xl shadow-lg ring-4 ${theme === 'dark' ? 'bg-black border-white/20 ring-white/5' : 'bg-white border-gray-200 ring-gray-50'}`}>
-                            <div className="flex items-center"><button onClick={() => handleAlign('left')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignStartVertical size={16} /></button><button onClick={() => handleAlign('center')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignCenterVertical size={16} /></button><button onClick={() => handleAlign('right')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignEndVertical size={16} /></button></div><div className={`h-4 w-px mx-1 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} /><div className="flex items-center"><button onClick={() => handleAlign('top')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignStartHorizontal size={16} /></button><button onClick={() => handleAlign('middle')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignCenterHorizontal size={16} /></button><button onClick={() => handleAlign('bottom')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignEndHorizontal size={16} /></button></div>
-                        </div>
-
-                        <div className={`flex p-0.5 border rounded-full shadow-lg ${theme === 'dark' ? 'bg-black border-white/20' : 'bg-slate-100 border-slate-300'}`}>
-                            <button
-                                onClick={() => setTheme('light')}
-                                className={`flex items-center justify-center p-2 rounded-full transition-all ${theme === 'light' ? 'bg-white text-orange-500 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                <Sun size={14} fill={theme === 'light' ? "currentColor" : "none"} />
-                            </button>
-                            <button
-                                onClick={() => setTheme('dark')}
-                                className={`flex items-center justify-center p-2 rounded-full transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                <Moon size={14} fill={theme === 'dark' ? "currentColor" : "none"} />
-                            </button>
+                    <div
+                        className={`flex-shrink-0 h-full border-r z-[100] shadow-2xl overflow-hidden transition-[width] duration-300 ease-in-out relative ${isSidebarOpen ? 'w-[340px]' : 'w-0 border-none'} ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}
+                    >
+                        <div className="w-[340px] h-full bg-white dark:bg-black">
+                            <EditorControls
+                                config={activePageConfig} setConfig={setConfig} selectedId={selectedIds.length === 1 ? selectedIds[0] : null} selectedIds={selectedIds} onSelectLayer={handleSelection}
+                                collapsed={false} onExpand={() => setIsSidebarOpen(true)} onHome={() => setIsBackendMenuOpen(true)} penToolMode={penToolMode as any} setPenToolMode={setPenToolMode as any}
+                                isAssistantOpen={isAssistantOpen} onToggleAssistant={() => setIsAssistantOpen(!isAssistantOpen)} isBackendMenuOpen={isBackendMenuOpen} setIsBackendMenuOpen={setIsBackendMenuOpen} onNewProject={() => setShowNewProjectFlow(true)}
+                                isAutoSaving={isAutoSaving} lastSaved={lastSaved}
+                                onOpenBgRemover={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
+                                onOpenNanoUpscaler={(src) => { setActiveHubContext(src || null); setIsUpscaleOpen(true); }}
+                                onOpenNanoGen={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
+                                onOpenRetouch={(src) => { setActiveHubContext(src || null); setIsRetouchOpen(true); }}
+                                onOpenTitanFill={(src) => { setActiveHubContext(src || null); setIsTitanFillOpen(true); }}
+                                onOpenNoteLM={() => setIsNoteLMOpen(true)}
+                                onOpenVoiceStudio={() => setIsVoiceStudioOpen(true)}
+                                onOpenCineEngine={() => setIsCineOpen(true)}
+                                onOpenTypefaceStudio={() => setIsTypefaceStudioOpen(true)}
+                                onOpenSpaceCampaign={() => setIsSpaceCampaignOpen(true)}
+                                onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={() => { }}
+                            />
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setIsNoteLMOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-white'}`}><BookOpen size={14} /> NOTE LM</button>
-                        <button onClick={() => setIsExportOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}><Download size={14} /> EXPORT UHD</button>
-                    </div>
-                </div>
+                    <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
+                        <div className={`h-14 border-b flex items-center justify-between px-4 z-50 shadow-sm shrink-0 transition-colors ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}>
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => setShowLanding(true)} className={`p-2 hover:bg-opacity-10 rounded transition-colors ${theme === 'dark' ? 'text-slate-400 hover:bg-white' : 'text-gray-600 hover:bg-black'}`} title="Return to Landing Page"><Home size={18} /></button>
 
-                <div
-                    className={`flex-1 overflow-hidden relative flex items-center justify-center transition-colors duration-500 ${isPanning || penToolMode === 'hand' || isSpacePressed ? 'cursor-grabbing' : 'cursor-default'} ${theme === 'dark' ? 'bg-[#111]' : 'bg-slate-200'}`}
-                    onMouseDown={handleMouseDown}
-                    onWheel={handleWheel}
-                >
-                    <div className={`absolute inset-0 opacity-[0.05] transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-5' : 'opacity-10'}`} style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-                    <div className="transition-transform duration-75 flex gap-24 items-center px-40 py-20" style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}>
-                        {currentState.pages.map((pageConfig, pageIndex) => {
-                            const isActive = pageIndex === currentState.activePageIndex;
-                            return (
-                                <div key={pageConfig.id} className="flex flex-col items-center group/artboard">
-                                    <div className={`flex items-center justify-between pb-3 select-none w-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-40 group-hover/artboard:opacity-80'}`} style={{ width: pageConfig.canvas.width * zoom }}>
-                                        <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border shadow-sm transition-all cursor-pointer ${isActive ? (theme === 'dark' ? 'bg-black border-indigo-500 text-white' : 'bg-white border-indigo-200 text-slate-900') : (theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white/60 border-slate-200')}`} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
-                                            <Layout size={14} className="text-indigo-500" /><input type="text" value={pageConfig.name} onChange={(e) => handleRenamePage(pageIndex, e.target.value)} onKeyDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} className={`bg-transparent border-none focus:ring-0 text-[10px] font-black uppercase tracking-widest outline-none w-24 ${isActive ? (theme === 'dark' ? 'text-white' : 'text-slate-700') : 'text-slate-50'}`} />
-                                        </div>
-                                        <div className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border shadow-sm transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover/artboard:opacity-100'} ${theme === 'dark' ? 'bg-black/90 border-white/10' : 'bg-white/90 border-slate-200'}`} onMouseDown={(e) => { e.stopPropagation(); handleExportSinglePage(pageIndex, 'HD'); }}><button className="flex items-center gap-1.5 px-2 py-1 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-all"><MonitorDown size={12} /><span className="text-[7px] font-black">1080P</span></button><button onClick={(e) => { e.stopPropagation(); handleDuplicatePage(pageIndex); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg"><Copy size={12} /></button><button onClick={(e) => { e.stopPropagation(); handleAddNewPage(); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg"><Plus size={12} /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteRequest(pageConfig.id); }} className={`p-1.5 rounded-lg transition-all ${deleteConfirmId === pageConfig.id ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 hover:text-red-600'}`}>{deleteConfirmId === pageConfig.id ? deleteConfirmIcon : <Trash2 size={12} />}</button></div>
-                                    </div>
-                                    <div className={`relative shadow-2xl rounded-sm transition-all duration-300 ${isActive ? 'ring-2 ring-indigo-500/20' : 'grayscale-[0.5]'}`} style={{ width: pageConfig.canvas.width * zoom, height: pageConfig.canvas.height * zoom }} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
-                                        <CanvasPreview
-                                            domId={`canvas-export-${pageConfig.id}`}
-                                            config={pageConfig}
-                                            scale={zoom}
-                                            onUpdate={(newConfig, save) => {
-                                                setAppState(prev => {
-                                                    const current = prev.history[prev.index];
-                                                    const nPages = [...current.pages];
-                                                    const targetIdx = nPages.findIndex(p => p.id === pageConfig.id);
-                                                    if (targetIdx === -1) return prev;
-                                                    nPages[targetIdx] = newConfig;
-                                                    const nState = { ...current, pages: nPages };
-                                                    if (save) {
-                                                        const nHist = prev.history.slice(0, prev.index + 1);
-                                                        nHist.push(deepCopy(nState));
-                                                        return { history: nHist, index: nHist.length - 1 };
-                                                    } else {
-                                                        const nHist = [...prev.history];
-                                                        nHist[prev.index] = nState;
-                                                        return { ...prev, history: nHist };
-                                                    }
-                                                });
-                                            }}
-                                            selectedIds={isActive ? selectedIds : []}
-                                            onSelect={(id, multi) => { if (!isActive) setActivePage(pageIndex); handleSelection(id, multi); }}
-                                            readOnly={false}
-                                            isActive={isActive}
-                                            handToolActive={penToolMode === 'hand' || isSpacePressed}
-                                        />
-                                    </div>
+                                <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
+                                <button onClick={handleUndo} disabled={appState.index === 0} className={`p-1.5 rounded disabled:opacity-20 transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}><Undo size={16} /></button>
+                                <button onClick={handleRedo} disabled={appState.index === appState.history.length - 1} className={`p-1.5 rounded disabled:opacity-20 transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}><Redo size={16} /></button>
+                                <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
+                                <div className={`flex items-center gap-1.5 border rounded-xl px-2 py-1 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-slate-100'}`}>
+                                    <button onClick={() => setZoom(Math.max(0.1, zoom - 0.05))} className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-white'}`}><Minus size={14} /></button>
+                                    <span className={`text-[11px] font-black w-12 text-center ${theme === 'dark' ? 'text-slate-400' : 'text-slate-700'}`}>{Math.round(zoom * 100)}%</span>
+                                    <button onClick={() => setZoom(Math.min(2, zoom + 0.05))} className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'text-gray-600 hover:bg-white'}`}><Plus size={14} /></button>
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
+                                <button onClick={() => setPenToolMode(penToolMode === 'hand' ? 'select' : 'hand')} className={`p-2 rounded transition-all ${penToolMode === 'hand' ? 'bg-indigo-600 text-white shadow-md' : (theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'hover:bg-gray-100 text-gray-600')}`}><Hand size={18} /></button>
+                                <div className={`h-6 w-px mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
+                                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-2 rounded transition-all ${isSidebarOpen ? 'bg-indigo-600 text-white shadow-md' : (theme === 'dark' ? 'text-slate-400 hover:bg-white/10' : 'hover:bg-gray-100 text-gray-600')}`} title="Toggle Sidebar"><PanelLeft size={18} /></button>
+                            </div>
 
-                    {/* FLOATING ACTION AREA BOTTOM LEFT */}
-                    <div className="absolute bottom-6 left-6 flex items-center gap-3 z-50">
-                        <button
-                            onClick={() => setIsAssistantOpen(!isAssistantOpen)}
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl border active:scale-95 group ${isAssistantOpen ? 'bg-indigo-600 border-indigo-500 text-white' : (theme === 'dark' ? 'bg-black/80 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-indigo-600')}`}
-                            title="Toggle Neural Assistant"
+                            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-6">
+                                <div className={`flex items-center gap-1 border p-1 rounded-xl shadow-lg ring-4 ${theme === 'dark' ? 'bg-black border-white/20 ring-white/5' : 'bg-white border-gray-200 ring-gray-50'}`}>
+                                    <div className="flex items-center"><button onClick={() => handleAlign('left')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignStartVertical size={16} /></button><button onClick={() => handleAlign('center')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignCenterVertical size={16} /></button><button onClick={() => handleAlign('right')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignEndVertical size={16} /></button></div><div className={`h-4 w-px mx-1 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} /><div className="flex items-center"><button onClick={() => handleAlign('top')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignStartHorizontal size={16} /></button><button onClick={() => handleAlign('middle')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignCenterHorizontal size={16} /></button><button onClick={() => handleAlign('bottom')} disabled={selectedIds.length === 0} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg transition-all"><AlignEndHorizontal size={16} /></button></div>
+                                </div>
+
+                                <div className={`flex p-0.5 border rounded-full shadow-lg ${theme === 'dark' ? 'bg-black border-white/20' : 'bg-slate-100 border-slate-300'}`}>
+                                    <button
+                                        onClick={() => setTheme('light')}
+                                        className={`flex items-center justify-center p-2 rounded-full transition-all ${theme === 'light' ? 'bg-white text-orange-500 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        <Sun size={14} fill={theme === 'light' ? "currentColor" : "none"} />
+                                    </button>
+                                    <button
+                                        onClick={() => setTheme('dark')}
+                                        className={`flex items-center justify-center p-2 rounded-full transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        <Moon size={14} fill={theme === 'dark' ? "currentColor" : "none"} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setIsNoteLMOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-white'}`}><BookOpen size={14} /> NOTE LM</button>
+                                <button onClick={() => setIsExportOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}><Download size={14} /> EXPORT UHD</button>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`flex-1 overflow-hidden relative flex items-center justify-center transition-colors duration-500 ${isPanning || penToolMode === 'hand' || isSpacePressed ? 'cursor-grabbing' : 'cursor-default'} ${theme === 'dark' ? 'bg-[#111]' : 'bg-slate-200'}`}
+                            onMouseDown={handleMouseDown}
+                            onWheel={handleWheel}
                         >
-                            {isAssistantOpen ? <Minimize2 size={24} /> : <MessageSquare size={24} className="group-hover:scale-110 transition-transform" />}
-                        </button>
+                            <div className={`absolute inset-0 opacity-[0.05] transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-5' : 'opacity-10'}`} style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                            <div className="transition-transform duration-75 flex gap-24 items-center px-40 py-20" style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}>
+                                {currentState.pages.map((pageConfig, pageIndex) => {
+                                    const isActive = pageIndex === currentState.activePageIndex;
+                                    return (
+                                        <div key={pageConfig.id} className="flex flex-col items-center group/artboard">
+                                            <div className={`flex items-center justify-between pb-3 select-none w-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-40 group-hover/artboard:opacity-80'}`} style={{ width: pageConfig.canvas.width * zoom }}>
+                                                <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border shadow-sm transition-all cursor-pointer ${isActive ? (theme === 'dark' ? 'bg-black border-indigo-500 text-white' : 'bg-white border-indigo-200 text-slate-900') : (theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white/60 border-slate-200')}`} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
+                                                    <Layout size={14} className="text-indigo-500" /><input type="text" value={pageConfig.name} onChange={(e) => handleRenamePage(pageIndex, e.target.value)} onKeyDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} className={`bg-transparent border-none focus:ring-0 text-[10px] font-black uppercase tracking-widest outline-none w-24 ${isActive ? (theme === 'dark' ? 'text-white' : 'text-slate-700') : 'text-slate-50'}`} />
+                                                </div>
+                                                <div className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border shadow-sm transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover/artboard:opacity-100'} ${theme === 'dark' ? 'bg-black/90 border-white/10' : 'bg-white/90 border-slate-200'}`} onMouseDown={(e) => { e.stopPropagation(); handleExportSinglePage(pageIndex, 'HD'); }}><button className="flex items-center gap-1.5 px-2 py-1 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-all"><MonitorDown size={12} /><span className="text-[7px] font-black">1080P</span></button><button onClick={(e) => { e.stopPropagation(); handleDuplicatePage(pageIndex); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg"><Copy size={12} /></button><button onClick={(e) => { e.stopPropagation(); handleAddNewPage(); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg"><Plus size={12} /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteRequest(pageConfig.id); }} className={`p-1.5 rounded-lg transition-all ${deleteConfirmId === pageConfig.id ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 hover:text-red-600'}`}>{deleteConfirmId === pageConfig.id ? deleteConfirmIcon : <Trash2 size={12} />}</button></div>
+                                            </div>
+                                            <div className={`relative shadow-2xl rounded-sm transition-all duration-300 ${isActive ? 'ring-2 ring-indigo-500/20' : 'grayscale-[0.5]'}`} style={{ width: pageConfig.canvas.width * zoom, height: pageConfig.canvas.height * zoom }} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
+                                                <CanvasPreview
+                                                    domId={`canvas-export-${pageConfig.id}`}
+                                                    config={pageConfig}
+                                                    scale={zoom}
+                                                    onUpdate={(newConfig, save) => {
+                                                        setAppState(prev => {
+                                                            const current = prev.history[prev.index];
+                                                            const nPages = [...current.pages];
+                                                            const targetIdx = nPages.findIndex(p => p.id === pageConfig.id);
+                                                            if (targetIdx === -1) return prev;
+                                                            nPages[targetIdx] = newConfig;
+                                                            const nState = { ...current, pages: nPages };
+                                                            if (save) {
+                                                                const nHist = prev.history.slice(0, prev.index + 1);
+                                                                nHist.push(deepCopy(nState));
+                                                                return { history: nHist, index: nHist.length - 1 };
+                                                            } else {
+                                                                const nHist = [...prev.history];
+                                                                nHist[prev.index] = nState;
+                                                                return { ...prev, history: nHist };
+                                                            }
+                                                        });
+                                                    }}
+                                                    selectedIds={isActive ? selectedIds : []}
+                                                    onSelect={(id, multi) => { if (!isActive) setActivePage(pageIndex); handleSelection(id, multi); }}
+                                                    readOnly={false}
+                                                    isActive={isActive}
+                                                    handToolActive={penToolMode === 'hand' || isSpacePressed}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* FLOATING ACTION AREA BOTTOM LEFT */}
+                            <div className="absolute bottom-6 left-6 flex items-center gap-3 z-50">
+                                <button
+                                    onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+                                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl border active:scale-95 group ${isAssistantOpen ? 'bg-indigo-600 border-indigo-500 text-white' : (theme === 'dark' ? 'bg-black/80 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-indigo-600')}`}
+                                    title="Toggle Neural Assistant"
+                                >
+                                    {isAssistantOpen ? <Minimize2 size={24} /> : <MessageSquare size={24} className="group-hover:scale-110 transition-transform" />}
+                                </button>
+                            </div>
+
+                            <div className={`absolute bottom-6 right-6 flex items-center gap-1.5 backdrop-blur-md border p-1.5 rounded-xl shadow-xl transition-colors ${theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white/90 border-slate-200'}`}>
+                                <button onClick={() => setZoom(0.45)} className={`px-2 py-1 text-[8px] font-black uppercase rounded-lg transition-colors ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'}`}>Fit Canvas</button>
+                                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(0.45); }} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"><Maximize size={14} /></button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className={`absolute bottom-6 right-6 flex items-center gap-1.5 backdrop-blur-md border p-1.5 rounded-xl shadow-xl transition-colors ${theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white/90 border-slate-200'}`}>
-                        <button onClick={() => setZoom(0.45)} className={`px-2 py-1 text-[8px] font-black uppercase rounded-lg transition-colors ${theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'}`}>Fit Canvas</button>
-                        <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(0.45); }} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"><Maximize size={14} /></button>
-                    </div>
+                    {isTypefaceStudioOpen && <NeuralTypefaceStudio isOpen={isTypefaceStudioOpen} onClose={() => setIsTypefaceStudioOpen(false)} onApply={handleApplyToCanvas} targetLayer={selectedTextLayer} />}
+                    {isPurgeOpen && <NeuralPurgeStudio isOpen={isPurgeOpen} onClose={() => setIsPurgeOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} library={activePageConfig.stash} onOpenCooking={() => { setIsPurgeOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsPurgeOpen(false); setIsTitanFillOpen(true); }} onOpenRetouch={() => { setIsPurgeOpen(false); setIsRetouchOpen(true); }} onOpenStory={() => { setIsPurgeOpen(false); setIsStoryOpen(true); }} />}
+                    {isUpscaleOpen && <NanoBananaStudio isOpen={isUpscaleOpen} onClose={() => setIsUpscaleOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
+                    {isStoryOpen && <StoryCampaignFlow isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsStoryOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsStoryOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsStoryOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsStoryOpen(false); setIsRetouchOpen(true); }} />}
+                    {isGenOpen && <NanoBananaGen isOpen={isGenOpen} onClose={() => setIsGenOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} chatMessages={chatMessages} onSendMessage={handleSendMessage} chatInput={chatInput} setChatInput={setChatInput} isChatLoading={isChatLoading} chatAttachments={chatAttachments} setChatAttachments={setChatAttachments} initialImage={activeHubContext} onOpenPurge={(src) => { setActiveHubContext(src); setIsPurgeOpen(true); }} onOpenRetouch={(src) => { setActiveHubContext(src); setIsRetouchOpen(true); }} onOpenUpscale={(src) => { setActiveHubContext(src); setIsUpscaleOpen(true); }} onOpenTitanFill={(src) => { setActiveHubContext(src); setIsTitanFillOpen(true); }} sessionHistory={genHistory} setSessionHistory={setGenHistory} />}
+                    {isRetouchOpen && <NeuralRetouchStudio isOpen={isRetouchOpen} onClose={() => setIsRetouchOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsRetouchOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsRetouchOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsRetouchOpen(false); setIsPurgeOpen(true); }} />}
+                    {isTitanFillOpen && <TitanFillStudio isOpen={isTitanFillOpen} onClose={() => setIsTitanFillOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsTitanFillOpen(false); setIsGenOpen(true); }} onOpenPurgeBg={() => { setIsTitanFillOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsTitanFillOpen(false); setIsRetouchOpen(true); }} />}
+                    {isCineOpen && <VeoCineStudio isOpen={isCineOpen} onClose={() => setIsCineOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
+                    {isNoteLMOpen && <NoteLMStudio isOpen={isNoteLMOpen} onClose={() => setIsNoteLMOpen(false)} onOpenCooking={() => { setIsNoteLMOpen(false); setIsGenOpen(true); }} onApplyVisual={handleApplyToCanvas} onOpenVoiceStudio={() => { setIsNoteLMOpen(false); setIsVoiceStudioOpen(true); }} />}
+                    {isVoiceStudioOpen && <VoiceStudio isOpen={isVoiceStudioOpen} onClose={() => setIsVoiceStudioOpen(false)} />}
+
+                    {isPodcastStudioOpen && (
+                        <PodcastStudio
+                            isOpen={isPodcastStudioOpen}
+                            onClose={() => setIsPodcastStudioOpen(false)}
+                            onApply={handleApplyToCanvas}
+                            onStash={handleStashResult}
+                            initialImage={activeHubContext}
+                        />
+                    )}
+
+                    {isSpaceCampaignOpen && (
+                        <SpaceCampaignStudio
+                            isOpen={isSpaceCampaignOpen}
+                            onClose={() => setIsSpaceCampaignOpen(false)}
+                            onApply={handleApplyToCanvas}
+                            onStash={handleStashResult}
+                        />
+                    )}
+
+                    {isCinematicDirectorOpen && (
+                        <CinematicDirectorStudio
+                            isOpen={isCinematicDirectorOpen}
+                            onClose={() => setIsCinematicDirectorOpen(false)}
+                            onApply={handleApplyToCanvas}
+                            onStash={handleStashResult}
+                            initialImage={activeHubContext}
+                        />
+                    )}
+
+                    {isExportOpen && <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} activePage={activePageConfig} allPages={currentState.pages} />}
+
+                    {isAssistantOpen && (
+                        <Rnd default={{ x: 80, y: window.innerHeight - 520, width: 320, height: 480 }} minWidth={300} minHeight={400} bounds="window" className="z-[2000]" dragHandleClassName="drag-handle" enableUserSelectHack={false}>
+                            <div className={`w-full h-full rounded-3xl shadow-2xl border overflow-hidden flex flex-col transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0a0a0a] border-white/10' : 'bg-white border-slate-200'}`}><div className={`drag-handle h-10 border-b flex items-center justify-between px-4 cursor-move shrink-0 ${theme === 'dark' ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-100'}`}><div className="flex items-center gap-2 pointer-events-none"><Bot size={14} className="text-indigo-50" /><span className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Asisten Neural</span></div><button onClick={() => setIsAssistantOpen(false)} className={`p-1.5 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-200 text-slate-400'}`}><X size={14} /></button></div><div className="flex-1 overflow-hidden"><AssistantPanel messages={chatMessages} input={chatInput} setInput={setChatInput} onSend={handleSendMessage} isLoading={isChatLoading} onClear={() => setChatMessages([])} attachments={chatAttachments} setAttachments={setChatAttachments} variant={theme} /></div></div>
+                        </Rnd>
+                    )}
+
+                    {toastMessage && <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[10000] animate-in fade-in slide-in-from-bottom-4 duration-300"><CheckCircle2 size={16} className="text-green-400" /><span className="text-[10px] font-black uppercase tracking-widest">{toastMessage}</span></div>}
                 </div>
-            </div>
-
-            {isTypefaceStudioOpen && <NeuralTypefaceStudio isOpen={isTypefaceStudioOpen} onClose={() => setIsTypefaceStudioOpen(false)} onApply={handleApplyToCanvas} targetLayer={selectedTextLayer} />}
-            {isPurgeOpen && <NeuralPurgeStudio isOpen={isPurgeOpen} onClose={() => setIsPurgeOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} library={activePageConfig.stash} onOpenCooking={() => { setIsPurgeOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsPurgeOpen(false); setIsTitanFillOpen(true); }} onOpenRetouch={() => { setIsPurgeOpen(false); setIsRetouchOpen(true); }} onOpenStory={() => { setIsPurgeOpen(false); setIsStoryOpen(true); }} />}
-            {isUpscaleOpen && <NanoBananaStudio isOpen={isUpscaleOpen} onClose={() => setIsUpscaleOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
-            {isStoryOpen && <StoryCampaignFlow isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsStoryOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsStoryOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsStoryOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsStoryOpen(false); setIsRetouchOpen(true); }} />}
-            {isGenOpen && <NanoBananaGen isOpen={isGenOpen} onClose={() => setIsGenOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} chatMessages={chatMessages} onSendMessage={handleSendMessage} chatInput={chatInput} setChatInput={setChatInput} isChatLoading={isChatLoading} chatAttachments={chatAttachments} setChatAttachments={setChatAttachments} initialImage={activeHubContext} onOpenPurge={(src) => { setActiveHubContext(src); setIsPurgeOpen(true); }} onOpenRetouch={(src) => { setActiveHubContext(src); setIsRetouchOpen(true); }} onOpenUpscale={(src) => { setActiveHubContext(src); setIsUpscaleOpen(true); }} onOpenTitanFill={(src) => { setActiveHubContext(src); setIsTitanFillOpen(true); }} sessionHistory={genHistory} setSessionHistory={setGenHistory} />}
-            {isRetouchOpen && <NeuralRetouchStudio isOpen={isRetouchOpen} onClose={() => setIsRetouchOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsRetouchOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsRetouchOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsRetouchOpen(false); setIsPurgeOpen(true); }} />}
-            {isTitanFillOpen && <TitanFillStudio isOpen={isTitanFillOpen} onClose={() => setIsTitanFillOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsTitanFillOpen(false); setIsGenOpen(true); }} onOpenPurgeBg={() => { setIsTitanFillOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsTitanFillOpen(false); setIsRetouchOpen(true); }} />}
-            {isCineOpen && <VeoCineStudio isOpen={isCineOpen} onClose={() => setIsCineOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
-            {isNoteLMOpen && <NoteLMStudio isOpen={isNoteLMOpen} onClose={() => setIsNoteLMOpen(false)} onOpenCooking={() => { setIsNoteLMOpen(false); setIsGenOpen(true); }} onApplyVisual={handleApplyToCanvas} onOpenVoiceStudio={() => { setIsNoteLMOpen(false); setIsVoiceStudioOpen(true); }} />}
-            {isVoiceStudioOpen && <VoiceStudio isOpen={isVoiceStudioOpen} onClose={() => setIsVoiceStudioOpen(false)} />}
-
-            {isPodcastStudioOpen && (
-                <PodcastStudio
-                    isOpen={isPodcastStudioOpen}
-                    onClose={() => setIsPodcastStudioOpen(false)}
-                    onApply={handleApplyToCanvas}
-                    onStash={handleStashResult}
-                    initialImage={activeHubContext}
-                />
             )}
-
-            {isSpaceCampaignOpen && (
-                <SpaceCampaignStudio
-                    isOpen={isSpaceCampaignOpen}
-                    onClose={() => setIsSpaceCampaignOpen(false)}
-                    onApply={handleApplyToCanvas}
-                    onStash={handleStashResult}
-                />
-            )}
-
-            {isCinematicDirectorOpen && (
-                <CinematicDirectorStudio
-                    isOpen={isCinematicDirectorOpen}
-                    onClose={() => setIsCinematicDirectorOpen(false)}
-                    onApply={handleApplyToCanvas}
-                    onStash={handleStashResult}
-                    initialImage={activeHubContext}
-                />
-            )}
-
-            {isExportOpen && <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} activePage={activePageConfig} allPages={currentState.pages} />}
-
-            {isAssistantOpen && (
-                <Rnd default={{ x: 80, y: window.innerHeight - 520, width: 320, height: 480 }} minWidth={300} minHeight={400} bounds="window" className="z-[2000]" dragHandleClassName="drag-handle" enableUserSelectHack={false}>
-                    <div className={`w-full h-full rounded-3xl shadow-2xl border overflow-hidden flex flex-col transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0a0a0a] border-white/10' : 'bg-white border-slate-200'}`}><div className={`drag-handle h-10 border-b flex items-center justify-between px-4 cursor-move shrink-0 ${theme === 'dark' ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-100'}`}><div className="flex items-center gap-2 pointer-events-none"><Bot size={14} className="text-indigo-50" /><span className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Asisten Neural</span></div><button onClick={() => setIsAssistantOpen(false)} className={`p-1.5 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-200 text-slate-400'}`}><X size={14} /></button></div><div className="flex-1 overflow-hidden"><AssistantPanel messages={chatMessages} input={chatInput} setInput={setChatInput} onSend={handleSendMessage} isLoading={isChatLoading} onClear={() => setChatMessages([])} attachments={chatAttachments} setAttachments={setChatAttachments} variant={theme} /></div></div>
-                </Rnd>
-            )}
-
-            {toastMessage && <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-[10000] animate-in fade-in slide-in-from-bottom-4 duration-300"><CheckCircle2 size={16} className="text-green-400" /><span className="text-[10px] font-black uppercase tracking-widest">{toastMessage}</span></div>}
-        </div>
+        </Suspense>
     );
 };
