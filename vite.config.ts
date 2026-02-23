@@ -9,10 +9,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    define: {
-      // Polyfill process.env for the app code which uses `process.env.API_KEY`
-      'process.env': env
-    },
     server: {
       host: true, // Expose to network if needed
       port: 5173
