@@ -1,5 +1,24 @@
 
+
+window.onerror = function (message, source, lineno, colno, error) {
+  console.error("NEURAL FATAL ERROR:", message, "at", source, ":", lineno, ":", colno, error);
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `<div style="padding: 20px; color: red; font-family: monospace;">
+      <h1>NEURAL CRASH DETECTED</h1>
+      <p>${message}</p>
+      <pre>${error?.stack || ''}</pre>
+    </div>`;
+  }
+  return false;
+};
+
+window.onunhandledrejection = function (event) {
+  console.error("NEURAL UNHANDLED REJECTION:", event.reason);
+};
+
 import React from 'react';
+
 import ReactDOM from 'react-dom/client';
 import { App } from './components/App';
 

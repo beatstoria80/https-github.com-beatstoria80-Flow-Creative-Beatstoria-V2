@@ -11,7 +11,7 @@ import {
     Link as LinkIcon, Eye, Code, MessageSquare, MonitorPlay,
     ChevronDown, Split, Square, Info, Trello, Flame, AlertCircle,
     Scissors, Menu, MonitorDown, Check, ArrowLeft, Hash, Minus,
-    Bot, RefreshCcw, AlertTriangle, RotateCw, Orbit
+    Bot, RefreshCcw, AlertTriangle, RotateCw, Orbit, Scan, Mic2
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { generateNanoImage, generateStoryScenes } from '../../services/geminiService';
@@ -31,6 +31,8 @@ interface StoryCampaignFlowProps {
     onOpenPurgeBg?: (src?: string) => void;
     onOpenRetouch?: (src?: string) => void;
     onOpenStory?: (src?: string) => void;
+    onOpenVoice?: () => void;
+    onOpenNoteLM?: () => void;
 }
 
 interface SceneNode {
@@ -59,7 +61,7 @@ const RATIO_OPTIONS = [
 
 export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     isOpen, onClose, onApply, onStash, initialImage,
-    onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch
+    onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch, onOpenStory, onOpenVoice, onOpenNoteLM
 }) => {
     const [identityAnchor, setIdentityAnchor] = useState<string | null>(initialImage || null);
 
@@ -92,6 +94,16 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
 
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isNavOpen, setIsNavOpen] = useState(false);
+
+    const protocols = [
+        { id: 'canvas', label: 'Space Canvas', icon: <Layout size={16} />, desc: 'Visual Workspace', active: false, onClick: onClose },
+        { id: 'story', label: 'Story Flow', icon: <Film size={16} />, desc: 'Narrative Designer', active: true, onClick: () => setIsNavOpen(false) },
+        { id: 'cooking', label: 'Space Cooking', icon: <Flame size={16} />, desc: 'Cooking Engine', active: false, onClick: () => { onOpenCooking?.(); setIsNavOpen(false); } },
+        { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={16} />, desc: 'Generative Inpaint', active: false, onClick: () => { onOpenTitanFill?.(); setIsNavOpen(false); } },
+        { id: 'purge', label: 'Purge BG', icon: <Scissors size={16} />, desc: 'Neural Extraction', active: false, onClick: () => { onOpenPurgeBg?.(); setIsNavOpen(false); } },
+        { id: 'voice', label: 'Voice Lab', icon: <Mic size={16} />, desc: 'Neural Synthesis', active: false, onClick: () => { onOpenVoice?.(); setIsNavOpen(false); } },
+    ];
     const [isDragging, setIsDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
 
@@ -297,11 +309,12 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
 
     const protocols = [
         { id: 'canvas', label: 'Space Canvas', icon: <Layout size={16} />, desc: 'Visual Workspace', active: false, onClick: onClose },
-        { id: 'cooking', label: 'Space Cooking', icon: <Flame size={16} />, desc: 'Cooking Engine', active: false, onClick: onOpenCooking },
+        { id: 'story', label: 'Story Flow', icon: <Film size={16} />, desc: 'Narrative Designer', active: true, onClick: () => setIsNavOpen(false) },
+        { id: 'cooking', label: 'Space Cooking', icon: <Flame size={16} />, desc: 'Cooking Engine', active: false, onClick: () => { onOpenCooking?.(); setIsNavOpen(false); } },
         { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={16} />, desc: 'Generative Inpaint', active: false, onClick: () => { onOpenTitanFill?.(activeScene.result || ''); setIsNavOpen(false); } },
         { id: 'purge', label: 'Purge BG', icon: <Scissors size={16} />, desc: 'Neural Extraction', active: false, onClick: () => { onOpenPurgeBg?.(activeScene.result || ''); setIsNavOpen(false); } },
-        { id: 'retouch', label: 'Neural Retouch', icon: <AlertCircle size={16} />, desc: 'Blemish Correction', active: false, onClick: () => { onOpenRetouch?.(activeScene.result || ''); setIsNavOpen(false); } },
-        { id: 'story', label: 'Story Flow', icon: <Film size={16} />, desc: 'Narrative Designer', active: true, onClick: () => setIsNavOpen(false) },
+        { id: 'voice', label: 'Voice Lab', icon: <Mic2 size={16} />, desc: 'Neural Synthesis', active: false, onClick: () => { onOpenVoice?.(); setIsNavOpen(false); } },
+        { id: 'notelm', label: 'Space NoteLM', icon: <BookOpen size={16} />, desc: 'Research & AI', active: false, onClick: () => { onOpenNoteLM?.(); setIsNavOpen(false); } },
     ];
 
     return (

@@ -209,8 +209,57 @@ export const App: React.FC = () => {
     const handleImportProject = (data: any) => { const pagesToImport = data.pages || (data.canvas ? [data] : null); if (!pagesToImport) return; const newProjectId = `import-${Date.now()}`; const uniqueName = generateUniqueName(data.projectName || "Imported Project"); const importedPages = pagesToImport.map((p: any) => ({ ...repairConfig(p), projectName: uniqueName, id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` })); setCurrentProjectId(newProjectId); setAppState({ history: [{ pages: importedPages, activePageIndex: 0 }], index: 0 }); saveProjectToDB({ id: newProjectId, name: uniqueName, lastSaved: Date.now(), data: { pages: importedPages, activePageIndex: 0 } }).then(refreshLibrary); setShowLanding(false); setIsBackendMenuOpen(false); localStorage.setItem('last_active_project_id', newProjectId); };
     const handlePurgeAllProjects = async () => { isPurgingRef.current = true; try { await clearAllProjectsFromDB(); localStorage.removeItem('last_active_project_id'); window.location.reload(); } catch (error) { isPurgingRef.current = false; } };
     const handleDeleteProject = async (id: string) => { if (id === currentProjectId) { isPurgingRef.current = true; const blankId = `proj-blank-${Date.now()}`; setCurrentProjectId(blankId); setAppState({ history: [{ pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }], index: 0 }); localStorage.removeItem('last_active_project_id'); } try { await deleteProjectFromDB(id); await refreshLibrary(); } catch (error) { } finally { if (id === currentProjectId) setTimeout(() => { isPurgingRef.current = false; }, 500); } };
-    const handleGroupLayers = () => { if (selectedIds.length < 2) return; const newGroupId = `group-${Date.now()}`; setConfig(prev => { const next = deepCopy(prev); next.groups.push({ id: newGroupId, name: 'GROUP ' + (next.groups.length + 1), layerIds: [...selectedIds], collapsed: false, locked: false, hidden: false }); return next; }, true); setSelectedIds([newGroupId]); };
-    const handleUndoGroup = () => { const groupsToUngroup = selectedIds.filter(id => id.startsWith('group-')); if (groupsToUngroup.length === 0) return; setConfig(prev => { const next = deepCopy(prev); next.groups = next.groups.filter(g => !groupsToUngroup.includes(g.id)); return next; }, true); setSelectedIds([]); };
+    const handleGroupLayers = () => {
+        if (selectedIds.length < 2) return;
+        const newGroupId = `group-${Date.now()}`;
+        setConfig(prev => {
+            const next = deepCopy(prev);
+            // 1. Flatten selection: if a group is selected, we take its children
+            const childIds: string[] = [];
+            selectedIds.forEach(id => {
+                if (id.startsWith('group-')) {
+                    const g = next.groups.find(group => group.id === id);
+                    if (g) childIds.push(...g.layerIds);
+                } else {
+                    childIds.push(id);
+                }
+            });
+            const uniqueChildIds = Array.from(new Set(childIds));
+            // 2. Remove these children from ANY existing groups
+            next.groups = next.groups.map(g => ({
+                ...g,
+                layerIds: g.layerIds.filter(id => !uniqueChildIds.includes(id))
+            })).filter(g => g.layerIds.length > 0);
+            // 3. Create the new group
+            next.groups.push({
+                id: newGroupId,
+                name: 'GROUP ' + (next.groups.length + 1),
+                layerIds: uniqueChildIds,
+                collapsed: false,
+                locked: false,
+                hidden: false
+            });
+            return next;
+        }, true);
+        setSelectedIds([newGroupId]);
+        showToast("LAYERS GROUPED");
+    };
+    const handleUndoGroup = () => {
+        const groupsToUngroup = selectedIds.filter(id => id.startsWith('group-'));
+        if (groupsToUngroup.length === 0) return;
+        const childIdsToSelect: string[] = [];
+        setConfig(prev => {
+            const next = deepCopy(prev);
+            groupsToUngroup.forEach(gid => {
+                const g = next.groups.find(group => group.id === gid);
+                if (g) childIdsToSelect.push(...g.layerIds);
+            });
+            next.groups = next.groups.filter(g => !groupsToUngroup.includes(g.id));
+            return next;
+        }, true);
+        setSelectedIds(Array.from(new Set(childIdsToSelect)));
+        showToast("LAYERS UNGROUPED");
+    };
 
     const handleApplyToCanvas = useCallback((src: string) => {
         if (!src) return;
@@ -645,8 +694,16 @@ export const App: React.FC = () => {
             }
         };
 
-        const handleKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space') setIsSpacePressed(false); };
-        const handleBlur = () => { setIsSpacePressed(false); setIsPanning(false); };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setIsSpacePressed(false);
+                setIsPanning(false);
+            }
+        };
+        const handleBlur = () => {
+            setIsSpacePressed(false);
+            setIsPanning(false);
+        };
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
@@ -720,7 +777,7 @@ export const App: React.FC = () => {
                     <NewProjectFlow isOpen={showNewProjectFlow} onClose={() => setShowNewProjectFlow(false)} onConfirm={handleCreateProject} />
 
                     <div
-                        className={`flex-shrink-0 h-full border-r z-[100] shadow-2xl overflow-hidden transition-[width] duration-300 ease-in-out relative ${isSidebarOpen ? 'w-[340px]' : 'w-0 border-none'} ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}
+                        className={`flex-shrink-0 h-full border-r z-[600] shadow-2xl overflow-hidden transition-[width] duration-300 ease-in-out relative ${isSidebarOpen ? 'w-[340px]' : 'w-0 border-none'} ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}
                     >
                         <div className="w-[340px] h-full bg-white dark:bg-black">
                             <EditorControls
@@ -730,7 +787,7 @@ export const App: React.FC = () => {
                                 isAutoSaving={isAutoSaving} lastSaved={lastSaved}
                                 onOpenBgRemover={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
                                 onOpenNanoUpscaler={(src) => { setActiveHubContext(src || null); setIsUpscaleOpen(true); }}
-                                onOpenNanoGen={(src) => { setActiveHubContext(src || null); setIsPurgeOpen(true); }}
+                                onOpenNanoGen={(src) => { setActiveHubContext(src || null); setIsGenOpen(true); }}
                                 onOpenRetouch={(src) => { setActiveHubContext(src || null); setIsRetouchOpen(true); }}
                                 onOpenTitanFill={(src) => { setActiveHubContext(src || null); setIsTitanFillOpen(true); }}
                                 onOpenNoteLM={() => setIsNoteLMOpen(true)}
@@ -738,13 +795,14 @@ export const App: React.FC = () => {
                                 onOpenCineEngine={() => setIsCineOpen(true)}
                                 onOpenTypefaceStudio={() => setIsTypefaceStudioOpen(true)}
                                 onOpenSpaceCampaign={() => setIsSpaceCampaignOpen(true)}
-                                onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={() => { }}
+                                onOpenPodcastStudio={() => setIsPodcastStudioOpen(true)}
+                                onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={handleGroupLayers}
                             />
                         </div>
                     </div>
 
                     <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
-                        <div className={`h-14 border-b flex items-center justify-between px-4 z-50 shadow-sm shrink-0 transition-colors ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}>
+                        <div className={`h-14 border-b flex items-center justify-between px-4 z-[500] shadow-sm shrink-0 transition-colors pointer-events-auto ${theme === 'dark' ? 'bg-black border-white/10' : 'bg-white border-slate-200'}`}>
                             <div className="flex items-center gap-1">
                                 <button onClick={() => setShowLanding(true)} className={`p-2 hover:bg-opacity-10 rounded transition-colors ${theme === 'dark' ? 'text-slate-400 hover:bg-white' : 'text-gray-600 hover:bg-black'}`} title="Return to Landing Page"><Home size={18} /></button>
 
@@ -815,16 +873,19 @@ export const App: React.FC = () => {
                                                     onUpdate={(newConfig, save) => {
                                                         setAppState(prev => {
                                                             const current = prev.history[prev.index];
-                                                            const nPages = [...current.pages];
-                                                            const targetIdx = nPages.findIndex(p => p.id === pageConfig.id);
+                                                            const targetIdx = current.pages.findIndex(p => p.id === pageConfig.id);
                                                             if (targetIdx === -1) return prev;
-                                                            nPages[targetIdx] = newConfig;
-                                                            const nState = { ...current, pages: nPages };
+
+                                                            const newPages = [...current.pages];
+                                                            newPages[targetIdx] = newConfig;
+                                                            const nState = { ...current, pages: newPages };
+
                                                             if (save) {
                                                                 const nHist = prev.history.slice(0, prev.index + 1);
                                                                 nHist.push(deepCopy(nState));
                                                                 return { history: nHist, index: nHist.length - 1 };
                                                             } else {
+                                                                // Fast path for non-history updates
                                                                 const nHist = [...prev.history];
                                                                 nHist[prev.index] = nState;
                                                                 return { ...prev, history: nHist };
@@ -844,7 +905,7 @@ export const App: React.FC = () => {
                             </div>
 
                             {/* FLOATING ACTION AREA BOTTOM LEFT */}
-                            <div className="absolute bottom-6 left-6 flex items-center gap-3 z-50">
+                            <div className="absolute bottom-6 left-6 flex items-center gap-3 z-[500] pointer-events-auto">
                                 <button
                                     onClick={() => setIsAssistantOpen(!isAssistantOpen)}
                                     className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl border active:scale-95 group ${isAssistantOpen ? 'bg-indigo-600 border-indigo-500 text-white' : (theme === 'dark' ? 'bg-black/80 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-indigo-600')}`}
@@ -865,12 +926,48 @@ export const App: React.FC = () => {
                     {isPurgeOpen && <NeuralPurgeStudio isOpen={isPurgeOpen} onClose={() => setIsPurgeOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} library={activePageConfig.stash} onOpenCooking={() => { setIsPurgeOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsPurgeOpen(false); setIsTitanFillOpen(true); }} onOpenRetouch={() => { setIsPurgeOpen(false); setIsRetouchOpen(true); }} onOpenStory={() => { setIsPurgeOpen(false); setIsStoryOpen(true); }} />}
                     {isUpscaleOpen && <NanoBananaStudio isOpen={isUpscaleOpen} onClose={() => setIsUpscaleOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
                     {isStoryOpen && <StoryCampaignFlow isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsStoryOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsStoryOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsStoryOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsStoryOpen(false); setIsRetouchOpen(true); }} />}
-                    {isGenOpen && <NanoBananaGen isOpen={isGenOpen} onClose={() => setIsGenOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} chatMessages={chatMessages} onSendMessage={handleSendMessage} chatInput={chatInput} setChatInput={setChatInput} isChatLoading={isChatLoading} chatAttachments={chatAttachments} setChatAttachments={setChatAttachments} initialImage={activeHubContext} onOpenPurge={(src) => { setActiveHubContext(src); setIsPurgeOpen(true); }} onOpenRetouch={(src) => { setActiveHubContext(src); setIsRetouchOpen(true); }} onOpenUpscale={(src) => { setActiveHubContext(src); setIsUpscaleOpen(true); }} onOpenTitanFill={(src) => { setActiveHubContext(src); setIsTitanFillOpen(true); }} sessionHistory={genHistory} setSessionHistory={setGenHistory} />}
+                    {isGenOpen && (
+                        <NanoBananaGen
+                            isOpen={isGenOpen}
+                            onClose={() => setIsGenOpen(false)}
+                            onApply={handleApplyToCanvas}
+                            onStash={handleStashResult}
+                            chatMessages={chatMessages}
+                            onSendMessage={handleSendMessage}
+                            chatInput={chatInput}
+                            setChatInput={setChatInput}
+                            isChatLoading={isChatLoading}
+                            chatAttachments={chatAttachments}
+                            setChatAttachments={setChatAttachments}
+                            initialImage={activeHubContext}
+                            onOpenPurge={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsPurgeOpen(true); }}
+                            onOpenRetouch={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsRetouchOpen(true); }}
+                            onOpenUpscale={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsUpscaleOpen(true); }}
+                            onOpenTitanFill={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsTitanFillOpen(true); }}
+                            onOpenStory={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsStoryOpen(true); }}
+                            onOpenCine={(src) => { setIsGenOpen(false); setActiveHubContext(src || null); setIsCineOpen(true); }}
+                            onOpenNoteLM={() => { setIsGenOpen(false); setIsNoteLMOpen(true); }}
+                            onOpenVoice={() => { setIsGenOpen(false); setIsVoiceStudioOpen(true); }}
+                            onOpenPodcast={() => { setIsGenOpen(false); setIsPodcastStudioOpen(true); }}
+                            sessionHistory={genHistory}
+                            setSessionHistory={setGenHistory}
+                        />
+                    )}
                     {isRetouchOpen && <NeuralRetouchStudio isOpen={isRetouchOpen} onClose={() => setIsRetouchOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsRetouchOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsRetouchOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsRetouchOpen(false); setIsPurgeOpen(true); }} />}
                     {isTitanFillOpen && <TitanFillStudio isOpen={isTitanFillOpen} onClose={() => setIsTitanFillOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsTitanFillOpen(false); setIsGenOpen(true); }} onOpenPurgeBg={() => { setIsTitanFillOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsTitanFillOpen(false); setIsRetouchOpen(true); }} />}
                     {isCineOpen && <VeoCineStudio isOpen={isCineOpen} onClose={() => setIsCineOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
                     {isNoteLMOpen && <NoteLMStudio isOpen={isNoteLMOpen} onClose={() => setIsNoteLMOpen(false)} onOpenCooking={() => { setIsNoteLMOpen(false); setIsGenOpen(true); }} onApplyVisual={handleApplyToCanvas} onOpenVoiceStudio={() => { setIsNoteLMOpen(false); setIsVoiceStudioOpen(true); }} />}
-                    {isVoiceStudioOpen && <VoiceStudio isOpen={isVoiceStudioOpen} onClose={() => setIsVoiceStudioOpen(false)} />}
+                    {isVoiceStudioOpen && (
+                        <VoiceStudio
+                            isOpen={isVoiceStudioOpen}
+                            onClose={() => setIsVoiceStudioOpen(false)}
+                            onOpenCooking={() => { setIsVoiceStudioOpen(false); setIsGenOpen(true); }}
+                            onOpenTitanFill={() => { setIsVoiceStudioOpen(false); setIsTitanFillOpen(true); }}
+                            onOpenPurgeBg={() => { setIsVoiceStudioOpen(false); setIsPurgeOpen(true); }}
+                            onOpenRetouch={() => { setIsVoiceStudioOpen(false); setIsRetouchOpen(true); }}
+                            onOpenStory={() => { setIsVoiceStudioOpen(false); setIsStoryOpen(true); }}
+                        />
+                    )}
 
                     {isPodcastStudioOpen && (
                         <PodcastStudio

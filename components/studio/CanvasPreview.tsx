@@ -24,7 +24,7 @@ const hexToRgba = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
         let hex = color.substring(1);
         if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-        if (hex.length !== 6) return `rgba(0,0,0,${safeAlpha})`; 
+        if (hex.length !== 6) return `rgba(0,0,0,${safeAlpha})`;
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
@@ -43,7 +43,7 @@ const hexToRgba = (color: string, alpha: number) => {
 const getEffectsStyle = (effects?: LayerEffects) => {
     if (!effects) return 'none';
     const { blur, brightness, contrast, saturate, hueRotate, grayscale, invert, sepia, dropShadowX, dropShadowY, dropShadowBlur, dropShadowColor, dropShadowOpacity } = effects;
-    
+
     const filterList = [
         blur > 0 ? `blur(${blur}px)` : '',
         brightness !== 1 ? `brightness(${brightness})` : '',
@@ -53,8 +53,8 @@ const getEffectsStyle = (effects?: LayerEffects) => {
         grayscale > 0 ? `grayscale(${grayscale})` : '',
         invert > 0 ? `invert(${invert})` : '',
         sepia > 0 ? `sepia(${sepia})` : '',
-        (dropShadowBlur > 0 || Math.abs(dropShadowX) > 0 || Math.abs(dropShadowY) > 0) 
-            ? `drop-shadow(${dropShadowX}px ${dropShadowY}px ${dropShadowBlur}px ${hexToRgba(dropShadowColor, dropShadowOpacity ?? 0.5)})` 
+        (dropShadowBlur > 0 || Math.abs(dropShadowX) > 0 || Math.abs(dropShadowY) > 0)
+            ? `drop-shadow(${dropShadowX}px ${dropShadowY}px ${dropShadowBlur}px ${hexToRgba(dropShadowColor, dropShadowOpacity ?? 0.5)})`
             : ''
     ].filter(Boolean).join(' ');
 
@@ -72,7 +72,7 @@ const getFontStyle = (fontString: string) => {
 
 const getBackgroundPatternStyle = (pattern: string, color: string = 'rgba(0,0,0,0.1)', opacity: number = 0.1) => {
     if (!pattern || pattern === 'none') return {};
-    const c = color.startsWith('#') ? hexToRgba(color, opacity) : color; 
+    const c = color.startsWith('#') ? hexToRgba(color, opacity) : color;
     let backgroundImage = '';
     let backgroundSize = '';
     switch (pattern) {
@@ -132,16 +132,16 @@ const getBoundingBox = (ids: string[], layers: any[]) => {
 
 // --- GLASS OVERLAY COMPONENT (Optimized) ---
 // Optimization: Added `isInteracting` prop. When true (dragging), skip heavy background sync.
-const GlassOverlay = React.memo(({ 
-    shape, 
-    canvasConfig, 
+const GlassOverlay = React.memo(({
+    shape,
+    canvasConfig,
     blurAmount,
     tintColor,
     tintOpacity,
     isActive,
     isInteracting
-}: { 
-    shape: ShapeLayer, 
+}: {
+    shape: ShapeLayer,
     canvasConfig: AppConfig['canvas'],
     blurAmount: number,
     tintColor: string,
@@ -152,29 +152,29 @@ const GlassOverlay = React.memo(({
     const bgBase = canvasConfig.background_gradient_enabled
         ? `linear-gradient(${canvasConfig.background_gradient_deg}deg, ${canvasConfig.background_gradient_start}, ${canvasConfig.background_gradient_end})`
         : canvasConfig.background_color;
-    
+
     // PERFORMANCE: If we are dragging, or the artboard is inactive, show a simplified fallback.
     // This prevents calculating the counter-rotated background on every pixel move.
     if (!isActive || isInteracting) {
         return (
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ pointerEvents: 'none' }}>
-                <div 
-                    className="absolute inset-0" 
-                    style={{ 
-                        backgroundColor: tintColor, 
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backgroundColor: tintColor,
                         opacity: Math.min(1, tintOpacity + 0.3), // Slightly more opaque for visibility during drag
                         backdropFilter: isInteracting ? undefined : `blur(${blurAmount}px)`, // Disable live blur during drag
                         WebkitBackdropFilter: isInteracting ? undefined : `blur(${blurAmount}px)`,
                         mixBlendMode: shape.blend_mode as any || 'normal'
-                    }} 
+                    }}
                 />
             </div>
         );
     }
 
     const patternStyle = getBackgroundPatternStyle(
-        canvasConfig.background_pattern, 
-        canvasConfig.background_pattern_color, 
+        canvasConfig.background_pattern,
+        canvasConfig.background_pattern_color,
         canvasConfig.background_pattern_opacity
     );
 
@@ -182,7 +182,7 @@ const GlassOverlay = React.memo(({
 
     return (
         <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ pointerEvents: 'none' }}>
-            <div 
+            <div
                 style={{
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
@@ -193,7 +193,7 @@ const GlassOverlay = React.memo(({
                     justifyContent: 'center',
                 }}
             >
-                <div 
+                <div
                     style={{
                         position: 'absolute',
                         width: canvasConfig.width,
@@ -206,19 +206,19 @@ const GlassOverlay = React.memo(({
                     }}
                 >
                     {bgImage && (
-                        <div 
-                            className="absolute inset-0" 
-                            style={{ 
-                                backgroundImage: bgImage, 
-                                backgroundSize: 'cover', 
+                        <div
+                            className="absolute inset-0"
+                            style={{
+                                backgroundImage: bgImage,
+                                backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 opacity: canvasConfig.background_layer_opacity ?? 1,
                                 filter: canvasConfig.background_layer_blur ? `blur(${canvasConfig.background_layer_blur}px)` : undefined
-                            }} 
+                            }}
                         />
                     )}
                     {patternStyle.backgroundImage && (
-                        <div 
+                        <div
                             className="absolute inset-0 z-0"
                             style={{
                                 ...patternStyle,
@@ -228,13 +228,13 @@ const GlassOverlay = React.memo(({
                     )}
                 </div>
             </div>
-            <div 
-                className="absolute inset-0" 
-                style={{ 
-                    backgroundColor: tintColor, 
+            <div
+                className="absolute inset-0"
+                style={{
+                    backgroundColor: tintColor,
                     opacity: tintOpacity,
                     mixBlendMode: shape.blend_mode as any || 'normal'
-                }} 
+                }}
             />
         </div>
     );
@@ -258,27 +258,27 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
     const [isEditing, setIsEditing] = useState(false);
     const { fontFamily, fontWeight } = getFontStyle(layer.font);
     const isGradient = layer.gradient_enabled;
-    const isFillEnabled = layer.fill_enabled !== false; 
+    const isFillEnabled = layer.fill_enabled !== false;
     const gradStart = layer.gradient_start || '#000000';
     const gradEnd = layer.gradient_end || '#3b82f6';
     const gradDeg = layer.gradient_deg ?? 90;
     const bgGradient = isGradient ? `linear-gradient(${gradDeg}deg, ${gradStart}, ${gradEnd})` : undefined;
     const resizeMode = layer.resize_mode || 'auto-width';
     const align = layer.alignment || 'center';
-    
+
     // --- WARP LOGIC (SVG PATHS) ---
     const isWarped = layer.warp_type && layer.warp_type !== 'none';
-    
+
     const getWarpPath = (w: number, h: number) => {
         const type = layer.warp_type;
         const bendVal = (layer.warp_bend ?? 50) / 100;
         const midY = h / 2;
-        
+
         if (type === 'circle') {
             if (Math.abs(bendVal) < 0.01) return `M 0,${midY} L ${w},${midY}`;
-            const s = Math.abs(w * 0.5 * bendVal); 
+            const s = Math.abs(w * 0.5 * bendVal);
             if (s < 1) return `M 0,${midY} L ${w},${midY}`;
-            const r = (s*s + (w/2)*(w/2)) / (2*s);
+            const r = (s * s + (w / 2) * (w / 2)) / (2 * s);
             const sweep = bendVal > 0 ? 0 : 1;
             return `M 0,${midY} A ${r},${r} 0 0,${sweep} ${w},${midY}`;
         }
@@ -286,13 +286,13 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         const distortion = w * 0.35 * bendVal;
 
         if (type === 'arch') {
-            return `M 0,${midY} Q ${w/2},${midY - distortion * 1.5} ${w},${midY}`;
+            return `M 0,${midY} Q ${w / 2},${midY - distortion * 1.5} ${w},${midY}`;
         }
 
         if (type === 'wave') {
             return `M 0,${midY} C ${w * 0.25},${midY - distortion} ${w * 0.75},${midY + distortion} ${w},${midY}`;
         }
-        
+
         return `M 0,${midY} L ${w},${midY}`;
     };
 
@@ -305,11 +305,11 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         backgroundSize: '100% 100%',
         display: 'inline-block',
         textAlign: align as any,
-    } : { 
+    } : {
         color: isFillEnabled ? layer.color : 'transparent',
         textAlign: align as any,
     };
-    
+
     const strokeStyle = layer.stroke_enabled ? `${layer.stroke_width ?? 1}px ${layer.stroke_color ?? '#000000'}` : undefined;
     const shadowStyle = layer.shadow_enabled ? `${layer.shadow_offset_x ?? 2}px ${layer.shadow_offset_y ?? 2}px ${layer.shadow_blur ?? 4}px ${layer.shadow_color ?? 'rgba(0,0,0,0.5)'}` : undefined;
 
@@ -318,11 +318,11 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         if (!layer.mask_enabled) return undefined;
         const feather = layer.mask_feather || 50;
         const type = layer.mask_type || 'fade-bottom';
-        
+
         const stop = Math.max(0, 100 - feather);
-        
+
         let gradient = '';
-        
+
         switch (type) {
             case 'fade-bottom': gradient = `linear-gradient(to bottom, black ${stop}%, transparent 100%)`; break;
             case 'fade-top': gradient = `linear-gradient(to top, black ${stop}%, transparent 100%)`; break;
@@ -331,7 +331,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             case 'radial': gradient = `radial-gradient(circle, black ${stop}%, transparent 100%)`; break;
             default: gradient = `linear-gradient(to bottom, black ${stop}%, transparent 100%)`;
         }
-        
+
         return {
             WebkitMaskImage: gradient,
             maskImage: gradient,
@@ -349,7 +349,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         const rect = node.getBoundingClientRect();
         const measuredWidth = rect.width / scale;
         const measuredHeight = rect.height / scale;
-        const tolerance = 1; 
+        const tolerance = 1;
         if (resizeMode === 'auto-width') {
             if (Math.abs(measuredWidth - layer.width) > tolerance || Math.abs(measuredHeight - layer.height) > tolerance) {
                 setTimeout(() => onUpdate(layer.id, { width: measuredWidth, height: measuredHeight }, false), 0);
@@ -366,8 +366,8 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
 
     return (
         <Rnd
-            key={layer.id} 
-            size={{ width: layer.width, height: layer.height }} 
+            key={layer.id}
+            size={{ width: layer.width, height: layer.height }}
             position={{ x: layer.position_x, y: layer.position_y }}
             // PERFORMANCE: Use pure drag updates without triggering heavy state logic until Stop
             onDragStop={(e, d) => onUpdate(layer.id, { position_x: d.x, position_y: d.y }, true)}
@@ -378,14 +378,14 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
                 if (resizeMode === 'auto-width') updates.resize_mode = 'auto-height';
                 onUpdate(layer.id, updates, true);
             }}
-            disableDragging={disableInteraction || layer.locked || isEditing} 
+            disableDragging={disableInteraction || layer.locked || isEditing}
             enableResizing={!disableInteraction && !layer.locked && !isEditing}
-            style={{ zIndex: zIndex, pointerEvents: 'auto' }} 
+            style={{ zIndex: zIndex, pointerEvents: 'auto' }}
             scale={scale}
             onMouseDown={onSelect}
             className={`selectable-layer layer-node-${layer.id} ${isGroupSelected ? 'pointer-events-none' : ''}`}
         >
-            <div 
+            <div
                 style={{ width: '100%', height: '100%', transform: `rotate(${layer.rotation}deg)`, transformOrigin: 'center center' }}
                 onDoubleClick={(e) => {
                     if (!readOnly && !layer.locked && !isGroupSelected) {
@@ -412,18 +412,18 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
                             fontSize={layer.font_size}
                             fontFamily={fontFamily}
                             fontWeight={fontWeight}
-                            style={{ 
-                                textShadow: shadowStyle, 
+                            style={{
+                                textShadow: shadowStyle,
                                 letterSpacing: layer.letter_spacing,
                                 fontStyle: layer.italic ? 'italic' : 'normal',
                             }}
                             dominantBaseline="middle"
                             textAnchor="middle"
                         >
-                            <textPath 
-                                href={`#path-${layer.id}`} 
+                            <textPath
+                                href={`#path-${layer.id}`}
                                 startOffset="50%"
-                                method="align" 
+                                method="align"
                                 spacing="auto"
                             >
                                 {layer.text}
@@ -431,25 +431,25 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
                         </text>
                     </svg>
                 ) : (
-                    <div style={{ 
-                        width: '100%', height: '100%', 
-                        display: 'flex', 
-                        alignItems: 'flex-start', 
-                        justifyContent: align === 'center' ? 'center' : (align === 'right' ? 'flex-end' : 'flex-start'), 
-                        fontSize: layer.font_size, fontFamily: fontFamily, fontWeight: fontWeight, opacity: layer.opacity, 
-                        lineHeight: layer.line_height ?? 1, letterSpacing: layer.letter_spacing, fontStyle: layer.italic ? 'italic' : 'normal', 
-                        whiteSpace: resizeMode === 'auto-width' ? 'nowrap' : 'normal', 
-                        wordBreak: 'normal', 
+                    <div style={{
+                        width: '100%', height: '100%',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: align === 'center' ? 'center' : (align === 'right' ? 'flex-end' : 'flex-start'),
+                        fontSize: layer.font_size, fontFamily: fontFamily, fontWeight: fontWeight, opacity: layer.opacity,
+                        lineHeight: layer.line_height ?? 1, letterSpacing: layer.letter_spacing, fontStyle: layer.italic ? 'italic' : 'normal',
+                        whiteSpace: resizeMode === 'auto-width' ? 'nowrap' : 'normal',
+                        wordBreak: 'normal',
                         filter: layer.effects_enabled ? getEffectsStyle(layer.effects) : undefined, overflow: 'visible',
                         position: 'relative',
                         ...maskStyle
                     }}>
-                        <span ref={textRef} style={{ 
-                            ...textStyle, 
-                            WebkitTextStroke: strokeStyle, 
-                            textShadow: shadowStyle, 
-                            display: 'inline-block', 
-                            width: resizeMode === 'auto-width' ? 'auto' : '100%', 
+                        <span ref={textRef} style={{
+                            ...textStyle,
+                            WebkitTextStroke: strokeStyle,
+                            textShadow: shadowStyle,
+                            display: 'inline-block',
+                            width: resizeMode === 'auto-width' ? 'auto' : '100%',
                             opacity: isEditing ? 0 : 1,
                             whiteSpace: resizeMode === 'auto-width' ? 'nowrap' : 'normal',
                             wordBreak: resizeMode === 'auto-width' ? 'normal' : 'break-word',
@@ -514,7 +514,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
             }
             setDraggingGuideId(null);
         };
-        window.addEventListener('mousemove', handleMove); 
+        window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
         return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
     }, [draggingGuideId, config, scale, onUpdate, domId, canvas]);
@@ -540,7 +540,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         e.stopPropagation(); onFocusCanvas?.();
         if (readOnly) return;
         const parentGroup = groups?.find(g => g.layerIds.includes(id));
-        if (parentGroup) { onSelect(parentGroup.id, e.shiftKey || e.metaKey); return; }
+        if (parentGroup && !selectedIds.includes(parentGroup.id)) { onSelect(parentGroup.id, e.shiftKey || e.metaKey); return; }
         const isMulti = e.shiftKey || e.metaKey;
         if (!selectedIds.includes(id) || isMulti) { onSelect(id, isMulti); }
     };
@@ -613,11 +613,11 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
     const bgBase = canvas.background_gradient_enabled
         ? `linear-gradient(${canvas.background_gradient_deg}deg, ${canvas.background_gradient_start}, ${canvas.background_gradient_end})`
         : canvas.background_color;
-    
+
     const patternStyle = getBackgroundPatternStyle(canvas.background_pattern, canvas.background_pattern_color, canvas.background_pattern_opacity);
     const bgImage = canvas.background_image ? `url(${canvas.background_image})` : undefined;
     const selectedGroupIds = (selectedIds || []).filter(id => typeof id === 'string' && id.startsWith('group-'));
-    
+
     const isMultiSelection = selectedIds.length > 1;
     let multiSelectRect = null;
     if (isMultiSelection) {
@@ -625,16 +625,16 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         const explicitLayerIds = selectedIds.filter(id => typeof id === 'string' && !id.startsWith('group-'));
         selectedIds.filter(id => typeof id === 'string' && id.startsWith('group-')).forEach(gid => {
             const g = groups?.find(grp => grp.id === gid);
-            if(g) explicitLayerIds.push(...g.layerIds);
+            if (g) explicitLayerIds.push(...g.layerIds);
         });
         multiSelectRect = getBoundingBox(explicitLayerIds, allLayers);
     }
 
     return (
-        <div 
-            id={domId} 
-            style={{ 
-                width: canvas.width, height: canvas.height, position: 'relative', overflow: 'hidden', 
+        <div
+            id={domId}
+            style={{
+                width: canvas.width, height: canvas.height, position: 'relative', overflow: 'hidden',
                 backgroundColor: canvas.background_gradient_enabled ? undefined : bgBase,
                 backgroundImage: canvas.background_gradient_enabled ? bgBase : undefined,
                 transform: `scale(${scale})`, transformOrigin: 'top left',
@@ -642,7 +642,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 zIndex: 0,
                 isolation: 'isolate',
                 willChange: 'transform' // Improve scrolling performance
-            }} 
+            }}
             onMouseDown={handleContainerMouseDown}
             className={`cursor-default relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'}`}
         >
@@ -695,10 +695,10 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 const isGroupSelected = parentGroup && selectedIds.includes(parentGroup.id);
                 const disableInteraction = readOnly || isGroupSelected || (isMultiSelection && isSelected);
                 const isInteracting = interactingId === id;
-                const commonProps = { 
-                    scale: scale, 
-                    onMouseDown: (e: any) => handleLayerMouseDown(id, e), 
-                    cancel: ".no-drag", 
+                const commonProps = {
+                    scale: scale,
+                    onMouseDown: (e: any) => handleLayerMouseDown(id, e),
+                    cancel: ".no-drag",
                     className: `selectable-layer layer-node-${id} ${disableInteraction ? 'pointer-events-none' : ''}`,
                     // PERFORMANCE: Set interaction state
                     onDragStart: () => setInteractingId(id),
@@ -719,7 +719,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     const layerOpacity = hasGlass ? 1 : (shape.opacity ?? 1);
                     let finalFill = shape.fill_color;
                     let finalGradient = undefined;
-                    
+
                     const isGlassMode = hasGlass;
 
                     if (shape.gradient_enabled && shape.gradient_stops && !isGlassMode) {
@@ -732,21 +732,21 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                         finalGradient = `linear-gradient(${shape.gradient_deg}deg, ${stops})`;
                         finalFill = 'transparent';
                     }
-                    
+
                     const borderRadius = shape.shape_type === 'circle' ? '50%' : `${shape.border_radius}px`;
                     const isLine = shape.shape_type === 'line';
                     const height = isLine ? Math.max(2, shape.stroke_width || 2) : shape.height;
                     const shadowStyle = shape.shadow_enabled ? `${shape.shadow_x ?? 0}px ${shape.shadow_y ?? 0}px ${shape.shadow_blur ?? 0}px ${shape.shadow_color ?? 'rgba(0,0,0,0.5)'}` : undefined;
-                    
+
                     const shouldApplyContainerBg = !isLine && !isGlassMode;
                     let clipPath = undefined;
                     if (shape.shape_type === 'triangle') clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
                     if (shape.shape_type === 'star') clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
-                    
+
                     let finalFilter = shape.effects_enabled ? getEffectsStyle(shape.effects) : '';
                     let finalBoxShadow = shadowStyle;
                     if ((shape.shape_type === 'triangle' || shape.shape_type === 'star') && shadowStyle) {
-                        finalBoxShadow = undefined; 
+                        finalBoxShadow = undefined;
                         const ds = `drop-shadow(${shape.shadow_x ?? 0}px ${shape.shadow_y ?? 0}px ${shape.shadow_blur ?? 0}px ${shape.shadow_color ?? 'rgba(0,0,0,0.5)'})`;
                         finalFilter = `${finalFilter} ${ds}`.trim();
                     }
@@ -755,9 +755,9 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     return (
                         <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10 }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', position: 'relative', transform: `rotate(${shape.rotation}deg)`, transformOrigin: 'center center' }}>
-                                
+
                                 {isGlassMode ? (
-                                    <div 
+                                    <div
                                         style={{
                                             position: 'absolute', inset: 0,
                                             borderRadius: borderRadius,
@@ -766,8 +766,8 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                                             overflow: 'hidden'
                                         }}
                                     >
-                                        <GlassOverlay 
-                                            shape={shape} 
+                                        <GlassOverlay
+                                            shape={shape}
                                             canvasConfig={canvas}
                                             blurAmount={shape.effects?.backdropBlur || 20}
                                             tintColor={shape.fill_color || '#ffffff'}
@@ -777,22 +777,22 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                                         />
                                     </div>
                                 ) : (
-                                    <div style={{ 
-                                        position: 'absolute', 
-                                        inset: 0, 
-                                        backgroundColor: shouldApplyContainerBg ? finalFill : (isLine ? shape.stroke_color : undefined), 
-                                        backgroundImage: shouldApplyContainerBg ? finalGradient : undefined, 
-                                        opacity: layerOpacity, 
-                                        borderRadius, 
-                                        filter: finalFilter, 
-                                        boxShadow: finalBoxShadow, 
-                                        clipPath: clipPath, 
+                                    <div style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        backgroundColor: shouldApplyContainerBg ? finalFill : (isLine ? shape.stroke_color : undefined),
+                                        backgroundImage: shouldApplyContainerBg ? finalGradient : undefined,
+                                        opacity: layerOpacity,
+                                        borderRadius,
+                                        filter: finalFilter,
+                                        boxShadow: finalBoxShadow,
+                                        clipPath: clipPath,
                                         mixBlendMode: shape.blend_mode as any,
                                         transform: 'translate3d(0,0,0) translateZ(0)',
                                     }} className="layer-content" />
                                 )}
 
-                                {!isLine && shape.stroke_width > 0 && <div style={{ position: 'absolute', inset: 0, border: `${shape.stroke_width}px solid ${shape.stroke_color}`, borderRadius, clipPath: clipPath, pointerEvents: 'none' }}/>}
+                                {!isLine && shape.stroke_width > 0 && <div style={{ position: 'absolute', inset: 0, border: `${shape.stroke_width}px solid ${shape.stroke_color}`, borderRadius, clipPath: clipPath, pointerEvents: 'none' }} />}
                                 {isSelected && !hideControls && !isGroupSelected && !isMultiSelection && <div className="absolute inset-0 border-2 border-indigo-500 pointer-events-none no-export" style={{ borderRadius }} />}
                             </div>
                         </Rnd>
@@ -804,15 +804,15 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     const maskScale = img.mask_content_scale ?? 1;
                     const maskX = img.mask_content_x ?? 0;
                     const maskY = img.mask_content_y ?? 0;
-                    
-                    const maskStyle = img.mask_enabled && img.mask_src ? { 
-                        maskImage: `url("${img.mask_src}")`, 
-                        WebkitMaskImage: `url("${img.mask_src}")`, 
+
+                    const maskStyle = img.mask_enabled && img.mask_src ? {
+                        maskImage: `url("${img.mask_src}")`,
+                        WebkitMaskImage: `url("${img.mask_src}")`,
                         maskSize: `${maskScale * 100}% ${maskScale * 100}%`,
-                        WebkitMaskSize: `${maskScale * 100}% ${maskScale * 100}%`, 
-                        maskPosition: `${50 + maskX}% ${50 + maskY}%`, 
-                        WebkitMaskPosition: `${50 + maskX}% ${50 + maskY}%`, 
-                        maskRepeat: 'no-repeat', 
+                        WebkitMaskSize: `${maskScale * 100}% ${maskScale * 100}%`,
+                        maskPosition: `${50 + maskX}% ${50 + maskY}%`,
+                        WebkitMaskPosition: `${50 + maskX}% ${50 + maskY}%`,
+                        maskRepeat: 'no-repeat',
                         WebkitMaskRepeat: 'no-repeat',
                         maskOrigin: 'border-box',
                         WebkitMaskOrigin: 'border-box',
@@ -821,7 +821,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                         maskMode: 'alpha',
                         WebkitMaskMode: 'alpha'
                     } : {};
-                    
+
                     return (
                         <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10 }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', transform: `rotate(${img.rotation}deg)`, transformOrigin: 'center center' }}>

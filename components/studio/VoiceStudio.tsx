@@ -58,6 +58,11 @@ import { GoogleGenAI, Modality, Type } from "@google/genai";
 interface VoiceStudioProps {
     isOpen: boolean;
     onClose: () => void;
+    onOpenCooking?: () => void;
+    onOpenTitanFill?: () => void;
+    onOpenPurgeBg?: () => void;
+    onOpenRetouch?: () => void;
+    onOpenStory?: () => void;
 }
 
 type GeminiVoice = 'Puck' | 'Kore' | 'Zephyr' | 'Charon' | 'Fenrir';
@@ -476,10 +481,12 @@ const WRITING_STYLES = [
     { id: 'technical', label: 'Struktur Data', icon: <Cpu size={12} /> },
     { id: 'executive', label: 'Ringkasan Eksekutif', icon: <Briefcase size={12} /> },
     { id: 'academic', label: 'Laporan Analitis', icon: <GraduationCap size={12} /> },
-    { id: 'benchmarking', label: 'Tabel Komparasi', icon: <BarChart4 size={12} /> }
+    { id: 'benchmarking', label: 'Tabel Komparasi', icon: <BarChart3 size={12} /> }
 ];
 
-export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => {
+export const VoiceStudio: React.FC<VoiceStudioProps> = ({
+    isOpen, onClose, onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch, onOpenStory
+}) => {
     const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('space_studio_theme') as any) || 'dark');
     const isDark = theme === 'dark';
 
@@ -541,6 +548,16 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => 
     const [activePlaybackType, setActivePlaybackType] = useState<'script' | 'reference'>('script');
 
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [isNavOpen, setIsNavOpen] = useState(false);
+
+    const protocols = [
+        { id: 'canvas', label: 'Space Canvas', icon: <Layout size={16} />, desc: 'Visual Workspace', active: false, onClick: onClose },
+        { id: 'voice', label: 'Voice Lab', icon: <Mic2 size={16} />, desc: 'Neural Synthesis', active: true, onClick: () => setIsNavOpen(false) },
+        { id: 'cooking', label: 'Space Cooking', icon: <Flame size={16} />, desc: 'Cooking Engine', active: false, onClick: () => { onOpenCooking?.(); setIsNavOpen(false); } },
+        { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={16} />, desc: 'Generative Inpaint', active: false, onClick: () => { onOpenTitanFill?.(); setIsNavOpen(false); } },
+        { id: 'purge', label: 'Purge BG', icon: <Scissors size={16} />, desc: 'Neural Extraction', active: false, onClick: () => { onOpenPurgeBg?.(); setIsNavOpen(false); } },
+        { id: 'story', label: 'Story Flow', icon: <Film size={16} />, desc: 'Narrative Designer', active: false, onClick: () => { onOpenStory?.(); setIsNavOpen(false); } },
+    ];
 
     const scriptRef = useRef<ScriptLine[]>([]);
     const mediaFileInputRef = useRef<HTMLInputElement>(null);
@@ -1165,6 +1182,10 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => 
         <div className={`fixed inset-0 z-[8000] flex flex-col font-sans animate-in fade-in duration-500 overflow-hidden pointer-events-auto ${isDark ? 'bg-[#050505] text-white' : 'bg-slate-50 text-slate-900'}`}>
             <header className={`h-14 px-8 border-b flex items-center justify-between shrink-0 relative z-[200] ${isDark ? 'bg-black border-white/5' : 'bg-white border-slate-200'}`}>
                 <div className="flex items-center gap-4">
+                    <button onClick={() => setIsNavOpen(true)} className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all group ${isDark ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-white hover:bg-indigo-600'}`}>
+                        <Scan size={16} className="group-hover:scale-110 transition-transform" />
+                    </button>
+                    <div className="w-px h-5 bg-white/10 mx-1" />
                     <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg shadow-lg">
                         <Volume2 size={16} className="text-white animate-pulse" />
                     </div>
@@ -1213,7 +1234,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => 
                                                 </div>
                                                 <ChevronDown size={8} className={`text-slate-400 ml-auto transition-transform opacity-50 ${isStyleMenuOpen ? 'rotate-180' : ''}`} />
                                             </button>
-                                            <button onClick={() => handleSpeakerUpdate(i, { gender: s.gender === 'male' ? 'female' : 'male' })} className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${s.gender === 'male' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-pink-600/20 text-pink-400 border border-pink-500/30'}`}>{s.gender === 'male' ? <Mars size={10} /> : <Venus size={10} />}</button>
+                                            <button onClick={() => handleSpeakerUpdate(i, { gender: s.gender === 'male' ? 'female' : 'male' })} className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${s.gender === 'male' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-pink-600/20 text-pink-400 border border-pink-500/30'}`}><span className="text-[8px] font-black">{s.gender === 'male' ? 'M' : 'F'}</span></button>
                                             {!isReaderActive && speakers.length > 1 && <button onClick={() => setSpeakers(p => p.filter(sp => sp.id !== s.id))} className="w-4 h-4 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"><X size={8} strokeWidth={3} /></button>}
                                         </div>
                                     );
@@ -1280,7 +1301,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => 
                                             <span className="text-[8px] font-black uppercase tracking-widest">BACK</span>
                                         </button>
                                         <button onClick={handleClearWorkspace} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all active:scale-95 group clear-btn ${isClearConfirming ? 'bg-red-600 text-white border border-red-500 shadow-lg scale-105' : 'bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'}`} title={isClearConfirming ? "Confirm?" : "Clear All"}>
-                                            {isClearConfirming ? <TriangleAlert size={10} className="animate-pulse" /> : <Trash2 size={10} className="group-hover:animate-bounce" />}
+                                            {isClearConfirming ? <AlertTriangle size={10} className="animate-pulse" /> : <Trash2 size={10} className="group-hover:animate-bounce" />}
                                             <span className="text-[8px] font-black uppercase tracking-widest">{isClearConfirming ? "CONFIRM?" : "CLEAR ALL"}</span>
                                         </button>
                                     </div>
@@ -1660,6 +1681,29 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({ isOpen, onClose }) => 
                                 INITIALIZE
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {isNavOpen && (
+                <div className="fixed inset-0 z-[9500] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-500" onClick={() => setIsNavOpen(false)}>
+                    <div className="w-full max-w-4xl grid grid-cols-3 gap-6 animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
+                        {protocols.map(p => (
+                            <button key={p.id} onClick={p.onClick} className={`group flex flex-col p-8 rounded-[2.5rem] border-2 transition-all duration-500 text-left relative overflow-hidden ${p.active ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_50px_rgba(79,70,229,0.3)] scale-105' : 'bg-white/5 border-white/10 text-slate-400 hover:border-indigo-500/50 hover:bg-white/10 hover:scale-[1.02]'}`}>
+                                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-6 transition-all duration-500 ${p.active ? 'bg-white text-indigo-600' : 'bg-white/10 text-slate-300 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                    {p.icon}
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className={`text-sm font-black uppercase tracking-[0.2em] ${p.active ? 'text-white' : 'text-slate-200 group-hover:text-white'}`}>{p.label}</h3>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest ${p.active ? 'text-indigo-100' : 'text-slate-500 group-hover:text-slate-400'}`}>{p.desc}</p>
+                                </div>
+                                {p.active && (
+                                    <div className="absolute top-6 right-6">
+                                        <div className="w-3 h-3 bg-white rounded-full animate-pulse shadow-[0_0_15px_rgba(255,255,255,1)]" />
+                                    </div>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
