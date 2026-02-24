@@ -430,6 +430,7 @@ export interface AppConfig {
   showNotes?: boolean;
   stash: StashAsset[];
   ai_sync_enabled?: boolean;
+  _apps_hub_collapsed?: boolean;
 }
 
 export interface NoteDocument {

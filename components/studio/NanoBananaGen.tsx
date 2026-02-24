@@ -7,7 +7,7 @@ import {
     BrainCircuit, ChefHat, Flame, Activity, Bot, CloudUpload,
     Camera, Film, Palette, Droplets, Settings2, Ratio, Target,
     Hash, History, Box, Minimize2, Archive, Wand2, ArrowRight,
-    ChevronDown, MonitorDown, ArrowDownRight, ShieldCheck, Scan
+    ChevronDown, MonitorDown, ArrowDownRight, ShieldCheck, Scan, Scissors
 } from 'lucide-react';
 import { generateNanoImage } from '../../services/geminiService';
 import { downloadBlob } from '../../services/exportService';

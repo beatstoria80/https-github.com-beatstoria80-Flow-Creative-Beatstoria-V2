@@ -29,7 +29,7 @@ interface EditorControlsProps {
     setConfig: (value: AppConfig | ((prev: AppConfig) => AppConfig), saveToHistory?: boolean) => void;
     selectedId: string | null;
     selectedIds: string[];
-    onSelectLayer: (id: string | null, multi?: boolean, append?: boolean) => void;
+    onSelectLayer: (id: string | string[] | null, multi?: boolean, append?: boolean) => void;
     collapsed?: boolean;
     onExpand?: () => void;
     onHome?: () => void;
@@ -219,47 +219,57 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                 <div className="h-full overflow-y-auto custom-scrollbar pb-24">
 
                     {/* PREMIUM APPS HUB SLIDER */}
-                    <div className="py-5 bg-slate-50/50 border-b border-slate-100 overflow-hidden group/apps">
-                        <div className="flex items-center justify-between px-5 mb-4">
+                    <div className="bg-slate-50/50 border-b border-slate-100 overflow-hidden group/apps">
+                        <div className="flex items-center justify-between px-5 py-4">
                             <div className="flex items-center gap-2">
                                 <Sparkles size={12} className="text-indigo-600 animate-pulse" />
                                 <span className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em]">Official Apps Hub</span>
                             </div>
-                            <div className="flex gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                            <div className="flex items-center gap-2">
+                                <div className="flex gap-1 mr-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                </div>
+                                <button
+                                    onClick={() => setConfig(prev => ({ ...prev, _apps_hub_collapsed: !prev._apps_hub_collapsed }), false)}
+                                    className="p-1 hover:bg-slate-200 rounded transition-all text-slate-400 hover:text-slate-900"
+                                >
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${(config as any)._apps_hub_collapsed ? '' : 'rotate-180'}`} />
+                                </button>
                             </div>
                         </div>
 
-                        <div className="flex overflow-x-auto gap-4 px-5 pb-4 no-scrollbar scroll-smooth snap-x snap-mandatory">
-                            {[
-                                { id: 'cooking', label: 'Dapur Penciptaan', icon: <Flame size={18} />, color: 'bg-orange-500', onClick: () => onOpenNanoGen?.(activeImageSrc) },
-                                { id: 'director', label: 'Cine Director', icon: <Film size={18} />, color: 'bg-purple-600', onClick: () => onOpenCinematicDirector?.() },
-                                { id: 'campaign', label: 'Space Campaign', icon: <Monitor size={18} />, color: 'bg-cyan-500', onClick: () => onOpenSpaceCampaign?.() },
-                                { id: 'notelm', label: 'NoteLM Intelijen', icon: <BookOpen size={18} />, color: 'bg-slate-700', onClick: () => onOpenNoteLM?.() },
-                                { id: 'voice', label: 'Voice Studio', icon: <Mic2 size={18} />, color: 'bg-blue-600', onClick: () => onOpenVoiceStudio?.() },
-                                { id: 'cine', label: 'CineEngine Pro', icon: <Video size={18} />, color: 'bg-red-600', onClick: () => onOpenCineEngine?.() },
-                                { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={18} />, color: 'bg-purple-600', onClick: () => onOpenTitanFill?.(activeImageSrc) },
-                                { id: 'purge', label: 'Purge BG', icon: <Scissors size={18} />, color: 'bg-rose-600', onClick: () => onOpenBgRemover?.(activeImageSrc) },
-                                { id: 'retouch', label: 'Penyembuh Neural', icon: <Bandage size={18} />, color: 'bg-emerald-600', onClick: () => onOpenRetouch?.(activeImageSrc) },
-                                { id: 'typeface', label: 'Studio Tipografi', icon: <Type size={18} />, color: 'bg-pink-600', onClick: () => onOpenTypefaceStudio?.() },
-                                { id: 'podcast', label: 'Podcast Gen', icon: <Mic2 size={18} />, color: 'bg-indigo-600', onClick: () => onOpenPodcastStudio?.() }
-                            ].map((app) => (
-                                <button
-                                    key={app.id}
-                                    onClick={app.onClick}
-                                    className="flex-shrink-0 w-24 flex flex-col items-center gap-2.5 snap-center transition-all duration-300 hover:scale-105 active:scale-95 group/app"
-                                >
-                                    <div className={`w-14 h-14 rounded-2xl ${app.color} flex items-center justify-center text-white shadow-lg shadow-${app.id}/20 group-hover/app:shadow-xl group-hover/app:rotate-3 transition-all relative overflow-hidden`}>
-                                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-                                        {app.icon}
-                                    </div>
-                                    <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight group-hover/app:text-slate-900 transition-colors">{app.label}</span>
-                                </button>
-                            ))}
-                        </div>
+                        {!(config as any)._apps_hub_collapsed && (
+                            <div className="flex overflow-x-auto gap-4 px-5 pb-5 no-scrollbar scroll-smooth snap-x snap-mandatory animate-in slide-in-from-top-2 duration-300">
+                                {[
+                                    { id: 'cooking', label: 'Dapur Penciptaan', icon: <Flame size={18} />, color: 'bg-orange-500', onClick: () => onOpenNanoGen?.(activeImageSrc) },
+                                    { id: 'director', label: 'Cine Director', icon: <Film size={18} />, color: 'bg-purple-600', onClick: () => onOpenCinematicDirector?.() },
+                                    { id: 'campaign', label: 'Space Campaign', icon: <Monitor size={18} />, color: 'bg-cyan-500', onClick: () => onOpenSpaceCampaign?.() },
+                                    { id: 'notelm', label: 'NoteLM Intelijen', icon: <BookOpen size={18} />, color: 'bg-slate-700', onClick: () => onOpenNoteLM?.() },
+                                    { id: 'voice', label: 'Voice Studio', icon: <Mic2 size={18} />, color: 'bg-blue-600', onClick: () => onOpenVoiceStudio?.() },
+                                    { id: 'cine', label: 'CineEngine Pro', icon: <Video size={18} />, color: 'bg-red-600', onClick: () => onOpenCineEngine?.() },
+                                    { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={18} />, color: 'bg-purple-600', onClick: () => onOpenTitanFill?.(activeImageSrc) },
+                                    { id: 'purge', label: 'Purge BG', icon: <Scissors size={18} />, color: 'bg-rose-600', onClick: () => onOpenBgRemover?.(activeImageSrc) },
+                                    { id: 'retouch', label: 'Penyembuh Neural', icon: <Bandage size={18} />, color: 'bg-emerald-600', onClick: () => onOpenRetouch?.(activeImageSrc) },
+                                    { id: 'typeface', label: 'Studio Tipografi', icon: <Type size={18} />, color: 'bg-pink-600', onClick: () => onOpenTypefaceStudio?.() },
+                                    { id: 'podcast', label: 'Podcast Gen', icon: <Mic2 size={18} />, color: 'bg-indigo-600', onClick: () => onOpenPodcastStudio?.() }
+                                ].map((app) => (
+                                    <button
+                                        key={app.id}
+                                        onClick={app.onClick}
+                                        className="flex-shrink-0 w-24 flex flex-col items-center gap-2.5 snap-center transition-all duration-300 hover:scale-105 active:scale-95 group/app"
+                                    >
+                                        <div className={`w-14 h-14 rounded-2xl ${app.color} flex items-center justify-center text-white shadow-lg shadow-${app.id}/20 group-hover/app:shadow-xl group-hover/app:rotate-3 transition-all relative overflow-hidden`}>
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+                                            {app.icon}
+                                        </div>
+                                        <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight group-hover/app:text-slate-900 transition-colors">{app.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
 
 
                     <MySectionHeader id="canvas" label="ENVIRONMENT" icon={<Maximize2 size={16} />} isActive={activeSection === 'canvas'} onToggle={handleSectionToggle} />
