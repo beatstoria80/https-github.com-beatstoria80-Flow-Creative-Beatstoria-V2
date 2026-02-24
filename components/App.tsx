@@ -832,6 +832,7 @@ export const App: React.FC = () => {
                                 onOpenTypefaceStudio={() => setIsTypefaceStudioOpen(true)}
                                 onOpenSpaceCampaign={() => setIsSpaceCampaignOpen(true)}
                                 onOpenPodcastStudio={() => setIsPodcastStudioOpen(true)}
+                                onOpenCinematicDirector={() => setIsCinematicDirectorOpen(true)}
                                 onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={handleGroupLayers}
                                 allPages={currentState.pages}
                                 activePageIndex={currentState.activePageIndex}

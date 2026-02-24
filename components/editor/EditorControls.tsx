@@ -46,6 +46,7 @@ interface EditorControlsProps {
     onOpenTypefaceStudio?: () => void;
     onOpenSpaceCampaign?: () => void;
     onOpenPodcastStudio?: () => void;
+    onOpenCinematicDirector?: () => void;
     onGroup?: () => void;
     onUngroup?: () => void;
     onMerge?: () => void;
@@ -125,7 +126,7 @@ const MyControlLabel = React.memo(({ label, icon, value, onChange, min, max, ste
 export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
     config, setConfig, selectedId, selectedIds, onSelectLayer, collapsed, onExpand, onHome,
     penToolMode, setPenToolMode, onOpenBgRemover, onOpenNanoUpscaler, onOpenNanoGen, onOpenRetouch, onOpenTitanFill, onOpenTypefaceStudio,
-    onOpenNoteLM, onOpenVoiceStudio, onOpenCineEngine, onOpenSpaceCampaign, onOpenPodcastStudio,
+    onOpenNoteLM, onOpenVoiceStudio, onOpenCineEngine, onOpenSpaceCampaign, onOpenPodcastStudio, onOpenCinematicDirector,
     onGroup, onUngroup, onMerge,
     isAssistantOpen, onToggleAssistant,
     isAutoSaving = false, lastSaved, onNewProject,
@@ -134,7 +135,6 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
 }) => {
     const [activeSection, setActiveSection] = useState<string | null>('layers');
     const [spaceTab, setSpaceTab] = useState<'geometry' | 'surface' | 'grids' | 'hud'>('surface');
-    const [isNeuralCenterCollapsed, setIsNeuralCenterCollapsed] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const layerInputRef = useRef<HTMLInputElement>(null);
 
@@ -218,60 +218,49 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
             <div className="flex-1 overflow-hidden relative">
                 <div className="h-full overflow-y-auto custom-scrollbar pb-24">
 
-                    <div className="p-4 space-y-4 animate-in fade-in duration-700 bg-slate-50/50 border-b border-slate-100 transition-all">
-                        <div className="flex items-center justify-between px-1">
+                    {/* PREMIUM APPS HUB SLIDER */}
+                    <div className="py-5 bg-slate-50/50 border-b border-slate-100 overflow-hidden group/apps">
+                        <div className="flex items-center justify-between px-5 mb-4">
                             <div className="flex items-center gap-2">
-                                <Cpu size={13} className="text-indigo-600 animate-pulse" />
-                                <span className="text-[9px] font-black text-slate-800 uppercase tracking-[0.25em]">Neural Center</span>
+                                <Sparkles size={12} className="text-indigo-600 animate-pulse" />
+                                <span className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em]">Official Apps Hub</span>
                             </div>
-                            <button onClick={() => setIsNeuralCenterCollapsed(!isNeuralCenterCollapsed)} className="p-1 hover:bg-slate-200 rounded transition-all text-slate-400 hover:text-slate-900">
-                                <ChevronDown size={14} className={`transition-transform duration-300 ${isNeuralCenterCollapsed ? '' : 'rotate-180'}`} />
-                            </button>
+                            <div className="flex gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                            </div>
                         </div>
 
-                        {!isNeuralCenterCollapsed && (
-                            <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-300">
-                                <button onClick={() => onOpenNanoGen?.(activeImageSrc)} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-yellow-400 transition-all active:scale-95 text-left ring-2 ring-yellow-500/10">
-                                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white shrink-0"><Flame size={16} /></div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Cooking<br />Engine</span>
-                                        <span className="text-[5px] font-bold text-yellow-600/60 uppercase mt-0.5">ASSET HUB</span>
+                        <div className="flex overflow-x-auto gap-4 px-5 pb-4 no-scrollbar scroll-smooth snap-x snap-mandatory">
+                            {[
+                                { id: 'cooking', label: 'Dapur Penciptaan', icon: <Flame size={18} />, color: 'bg-orange-500', onClick: () => onOpenNanoGen?.(activeImageSrc) },
+                                { id: 'director', label: 'Cine Director', icon: <Film size={18} />, color: 'bg-purple-600', onClick: () => onOpenCinematicDirector?.() },
+                                { id: 'campaign', label: 'Space Campaign', icon: <Monitor size={18} />, color: 'bg-cyan-500', onClick: () => onOpenSpaceCampaign?.() },
+                                { id: 'notelm', label: 'NoteLM Intelijen', icon: <BookOpen size={18} />, color: 'bg-slate-700', onClick: () => onOpenNoteLM?.() },
+                                { id: 'voice', label: 'Voice Studio', icon: <Mic2 size={18} />, color: 'bg-blue-600', onClick: () => onOpenVoiceStudio?.() },
+                                { id: 'cine', label: 'CineEngine Pro', icon: <Video size={18} />, color: 'bg-red-600', onClick: () => onOpenCineEngine?.() },
+                                { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={18} />, color: 'bg-purple-600', onClick: () => onOpenTitanFill?.(activeImageSrc) },
+                                { id: 'purge', label: 'Purge BG', icon: <Scissors size={18} />, color: 'bg-rose-600', onClick: () => onOpenBgRemover?.(activeImageSrc) },
+                                { id: 'retouch', label: 'Penyembuh Neural', icon: <Bandage size={18} />, color: 'bg-emerald-600', onClick: () => onOpenRetouch?.(activeImageSrc) },
+                                { id: 'typeface', label: 'Studio Tipografi', icon: <Type size={18} />, color: 'bg-pink-600', onClick: () => onOpenTypefaceStudio?.() },
+                                { id: 'podcast', label: 'Podcast Gen', icon: <Mic2 size={18} />, color: 'bg-indigo-600', onClick: () => onOpenPodcastStudio?.() }
+                            ].map((app) => (
+                                <button
+                                    key={app.id}
+                                    onClick={app.onClick}
+                                    className="flex-shrink-0 w-24 flex flex-col items-center gap-2.5 snap-center transition-all duration-300 hover:scale-105 active:scale-95 group/app"
+                                >
+                                    <div className={`w-14 h-14 rounded-2xl ${app.color} flex items-center justify-center text-white shadow-lg shadow-${app.id}/20 group-hover/app:shadow-xl group-hover/app:rotate-3 transition-all relative overflow-hidden`}>
+                                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+                                        {app.icon}
                                     </div>
+                                    <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight group-hover/app:text-slate-900 transition-colors">{app.label}</span>
                                 </button>
-                                <button onClick={() => onOpenPodcastStudio?.()} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-purple-400 transition-all active:scale-95 text-left ring-2 ring-purple-500/10">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-600 group-hover:bg-purple-500 group-hover:text-white shrink-0"><Mic2 size={16} /></div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Podcast<br />Gen</span>
-                                        <span className="text-[5px] font-bold text-purple-600/60 uppercase mt-0.5">IDENTITY LOCK</span>
-                                    </div>
-                                </button>
-                                <button onClick={() => onOpenNoteLM?.()} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-blue-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white shrink-0"><BookOpen size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">NoteLM<br />Insights</span>
-                                </button>
-                                <button onClick={() => onOpenCineEngine?.()} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-red-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-600 group-hover:bg-red-500 group-hover:text-white shrink-0"><Video size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Cine<br />Engine</span>
-                                </button>
-                                <button onClick={() => onOpenTitanFill?.(activeImageSrc)} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-purple-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-600 group-hover:bg-purple-500 group-hover:text-white shrink-0"><Wand2 size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Titan<br />Fill</span>
-                                </button>
-                                <button onClick={() => onOpenBgRemover?.(activeImageSrc)} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-rose-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white shrink-0"><Scissors size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Purge<br />BG</span>
-                                </button>
-                                <button onClick={() => onOpenRetouch?.(activeImageSrc)} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-emerald-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white shrink-0"><Bandage size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Neural<br />Retouch</span>
-                                </button>
-                                <button onClick={() => onOpenSpaceCampaign?.()} className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-cyan-400 transition-all active:scale-95 text-left">
-                                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white shrink-0"><Monitor size={16} /></div>
-                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">Space<br />Campaign</span>
-                                </button>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
+
 
                     <MySectionHeader id="canvas" label="ENVIRONMENT" icon={<Maximize2 size={16} />} isActive={activeSection === 'canvas'} onToggle={handleSectionToggle} />
                     {activeSection === 'canvas' && (
