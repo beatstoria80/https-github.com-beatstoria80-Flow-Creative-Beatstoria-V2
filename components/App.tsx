@@ -833,6 +833,13 @@ export const App: React.FC = () => {
                                 onOpenSpaceCampaign={() => setIsSpaceCampaignOpen(true)}
                                 onOpenPodcastStudio={() => setIsPodcastStudioOpen(true)}
                                 onGroup={handleGroupLayers} onUngroup={handleUndoGroup} onMerge={handleGroupLayers}
+                                allPages={currentState.pages}
+                                activePageIndex={currentState.activePageIndex}
+                                onSelectPage={setActivePage}
+                                onDeletePage={handleDeleteRequest}
+                                onDuplicatePage={handleDuplicatePage}
+                                onAddPage={handleAddNewPage}
+                                onRenamePage={handleRenamePage}
                             />
                         </div>
                     </div>

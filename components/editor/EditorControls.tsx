@@ -56,6 +56,13 @@ interface EditorControlsProps {
     onNewProject?: () => void;
     isBackendMenuOpen: boolean;
     setIsBackendMenuOpen: (v: boolean) => void;
+    allPages: AppConfig[];
+    activePageIndex: number;
+    onSelectPage: (index: number) => void;
+    onDeletePage: (id: string) => void;
+    onDuplicatePage: (index: number) => void;
+    onAddPage: () => void;
+    onRenamePage: (index: number, name: string) => void;
 }
 
 const TungkuIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -91,7 +98,8 @@ export const EditorControls: React.FC<EditorControlsProps> = ({
     onGroup, onUngroup, onMerge,
     isAssistantOpen, onToggleAssistant,
     isAutoSaving = false, lastSaved, onNewProject,
-    isBackendMenuOpen, setIsBackendMenuOpen
+    isBackendMenuOpen, setIsBackendMenuOpen,
+    allPages, activePageIndex, onSelectPage, onDeletePage, onDuplicatePage, onAddPage, onRenamePage
 }) => {
     const [activeSection, setActiveSection] = useState<string | null>('layers');
     const [spaceTab, setSpaceTab] = useState<'geometry' | 'surface' | 'grids' | 'hud'>('surface');
@@ -390,7 +398,26 @@ export const EditorControls: React.FC<EditorControlsProps> = ({
                             </div>
                         )}
                     />
-                    {activeSection === 'layers' && <LayersPanel config={config} setConfig={setConfig} selectedIds={selectedIds} onSelectLayer={onSelectLayer} isVisible={true} setIsVisible={() => { }} onGroup={onGroup} onUngroup={onUngroup} onMerge={onMerge} />}
+                    {activeSection === 'layers' && (
+                        <LayersPanel
+                            config={config}
+                            setConfig={setConfig}
+                            selectedIds={selectedIds}
+                            onSelectLayer={onSelectLayer}
+                            isVisible={true}
+                            setIsVisible={() => { }}
+                            onGroup={onGroup}
+                            onUngroup={onUngroup}
+                            onMerge={onMerge}
+                            allPages={allPages}
+                            activePageIndex={activePageIndex}
+                            onSelectPage={onSelectPage}
+                            onDeletePage={onDeletePage}
+                            onDuplicatePage={onDuplicatePage}
+                            onAddPage={onAddPage}
+                            onRenamePage={onRenamePage}
+                        />
+                    )}
                     <SectionHeader id="image-editor" label="IMAGE EDITOR" icon={<Sliders size={16} />} />
                     {activeSection === 'image-editor' && (
                         (() => {
