@@ -5,7 +5,7 @@ import {
     MoveUp, MoveDown, Zap, Trash2, Copy, MoreVertical,
     Command, Shield, Fingerprint, Layers, ChevronUp, ChevronDown,
     Sparkles, MousePointer2, Combine, Split, Folder, FolderOpen,
-    ArrowUpToLine, ArrowDownToLine, Merge, AlertTriangle
+    ArrowUpToLine, ArrowDownToLine, Merge, AlertTriangle, Plus
 } from 'lucide-react';
 import { AppConfig, ImageLayer, ShapeLayer, TextLayer, LayerEffects } from '../../types';
 import { DEFAULT_EFFECTS } from '../../constants';
