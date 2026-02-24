@@ -1,20 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppConfig, ImageLayer, LayerEffects } from '../../types';
-import { 
-    Maximize, MoveHorizontal, MoveVertical, RotateCw, 
-    FlipHorizontal, FlipVertical, Ghost, Layers, 
+import {
+    Maximize, MoveHorizontal, MoveVertical, RotateCw,
+    FlipHorizontal, FlipVertical, Ghost, Layers,
     Wind, Droplets, Image as ImageIcon, Box, Layout,
     Square, Sun, Contrast, Palette, RefreshCcw,
-    ScanLine, GripHorizontal, Sliders
+    ScanLine, GripHorizontal, Sliders, Thermometer,
+    Cloud, Target, Filter, Command, BoxSelect
 } from 'lucide-react';
 import { BLEND_MODES, DEFAULT_EFFECTS } from '../../constants';
 
 interface ImageEditorEngineProps {
-  config: AppConfig;
-  setConfig: (value: AppConfig | ((prev: AppConfig) => AppConfig), saveToHistory?: boolean) => void;
-  selectedId: string | null;
-  onSelectLayer: (id: string | null) => void;
+    config: AppConfig;
+    setConfig: (value: AppConfig | ((prev: AppConfig) => AppConfig), saveToHistory?: boolean) => void;
+    selectedId: string | null;
+    onSelectLayer: (id: string | null) => void;
 }
 
 const SmoothSlider = ({ label, min, max, step = 1, value, onChange, unit = "", icon }: any) => {
@@ -38,24 +39,24 @@ const SmoothSlider = ({ label, min, max, step = 1, value, onChange, unit = "", i
                     {typeof localValue === 'number' ? Number(localValue).toFixed(unit === 'x' ? 1 : 0) : localValue}{unit}
                 </span>
             </div>
-            <input 
-                type="range" min={min} max={max} step={step} value={localValue || 0} 
+            <input
+                type="range" min={min} max={max} step={step} value={localValue || 0}
                 onChange={handleChange}
                 onMouseUp={(e) => onChange(Number((e.target as any).value), true)}
-                className="w-full h-1 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 transition-all shadow-inner" 
+                className="w-full h-1 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 transition-all shadow-inner"
             />
         </div>
     );
 };
 
 export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, setConfig, selectedId }) => {
-    const [activeTab, setActiveTab] = useState<'geo' | 'grade' | 'fx'>('geo');
-    
+    const [activeTab, setActiveTab] = useState<'geo' | 'grade' | 'fx' | 'finish'>('geo');
+
     const isBackground = selectedId === 'bg-layer';
     const selectedLayer = !isBackground ? config.image_layers.find(l => l.id === selectedId) : null;
-    
+
     // Ensure we always have a valid effects object by merging with defaults
-    const effects = isBackground 
+    const effects = isBackground
         ? { ...DEFAULT_EFFECTS, ...(config.canvas.background_effects || {}) }
         : { ...DEFAULT_EFFECTS, ...(selectedLayer?.effects || {}) };
 
@@ -72,9 +73,9 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
 
     const updateEffect = (key: keyof LayerEffects, value: any, save = false) => {
         if (isBackground) {
-             const current = config.canvas.background_effects || DEFAULT_EFFECTS;
-             const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value };
-             setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, background_effects: newEffects } }), save);
+            const current = config.canvas.background_effects || DEFAULT_EFFECTS;
+            const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value };
+            setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, background_effects: newEffects } }), save);
         } else if (selectedId && selectedLayer) {
             const current = selectedLayer.effects || DEFAULT_EFFECTS;
             const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value } as LayerEffects;
@@ -104,7 +105,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
             dropShadowColor: '#000000',
             dropShadowOpacity: 0.5
         };
-        
+
         if (selectedId && selectedLayer) {
             const current = selectedLayer.effects || DEFAULT_EFFECTS;
             const newEffects = { ...current, ...shadowDefaults } as LayerEffects;
@@ -119,7 +120,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
 
     return (
         <div className="flex flex-col h-full bg-white animate-fadeIn pb-32 overflow-y-auto custom-scrollbar">
-            
+
             {/* Header */}
             <div className="p-4 border-b border-slate-50 bg-slate-900">
                 <div className="flex items-center justify-between">
@@ -146,8 +147,9 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                     { id: 'geo', label: 'GEOMETRY', icon: <Layout size={12} /> },
                     { id: 'grade', label: 'GRADING', icon: <Palette size={12} /> },
                     { id: 'fx', label: 'DEPTH FX', icon: <Layers size={12} /> },
+                    { id: 'finish', label: 'FINISH', icon: <Filter size={12} /> },
                 ].map(tab => (
-                    <button 
+                    <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-lg transition-all ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
@@ -159,7 +161,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
             </div>
 
             <div className="p-5 space-y-8">
-                
+
                 {/* --- TAB 1: GEOMETRY (Transform & Frame) --- */}
                 {activeTab === 'geo' && (
                     !isBackground ? (
@@ -167,7 +169,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                             {/* DIMENSIONS */}
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center px-1">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Maximize size={10}/> Dimensions</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Maximize size={10} /> Dimensions</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 shadow-inner">
                                     <div className="space-y-1">
@@ -186,14 +188,34 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                                         <span className="text-[6px] font-bold text-slate-400 uppercase tracking-wider">POS Y</span>
                                         <input type="number" value={selectedLayer?.position_y} onChange={(e) => updateLayerProp('position_y', parseInt(e.target.value), true)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-700 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all text-center" />
                                     </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[6px] font-bold text-slate-400 uppercase tracking-wider">DEPTH (Z)</span>
+                                        <input type="number" value={selectedLayer?.position_z || 0} onChange={(e) => updateLayerProp('position_z', parseInt(e.target.value), true)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-700 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all text-center" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[6px] font-bold text-slate-400 uppercase tracking-wider">INDEX (Z)</span>
+                                        <input type="number" disabled className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-400 text-center opacity-50 cursor-not-allowed" placeholder="AUTO" />
+                                    </div>
                                 </div>
                             </div>
-                            
+
                             {/* ORIENTATION */}
                             <div className="space-y-3">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><ScanLine size={10}/> Orientation</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><ScanLine size={10} /> Orientation</span>
                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 shadow-inner">
-                                    <SmoothSlider label="ROTATION" min={0} max={360} value={selectedLayer?.rotation} onChange={(v: number, s: boolean) => updateLayerProp('rotation', v, s)} unit="°" icon={<RotateCw size={10}/>} />
+                                    <SmoothSlider label="ROTATION (Z)" min={0} max={360} value={selectedLayer?.rotation} onChange={(v: number, s: boolean) => updateLayerProp('rotation', v, s)} unit="°" icon={<RotateCw size={10} />} />
+
+                                    <div className="h-px bg-slate-200/50" />
+
+                                    <div className="space-y-4">
+                                        <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><BoxSelect size={9} /> 3D PERSPECTIVE ROTATION</span>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <SmoothSlider label="PITCH (X)" min={-180} max={180} value={effects.rotateX || 0} onChange={(v: number, s: boolean) => updateEffect('rotateX', v, s)} unit="°" />
+                                            <SmoothSlider label="YAW (Y)" min={-180} max={180} value={effects.rotateY || 0} onChange={(v: number, s: boolean) => updateEffect('rotateY', v, s)} unit="°" />
+                                        </div>
+                                        <SmoothSlider label="PERSPECTIVE DIST" min={0} max={2000} value={effects.perspective || 0} onChange={(v: number, s: boolean) => updateEffect('perspective', v, s)} unit="PX" />
+                                    </div>
+
                                     <div className="flex gap-2 pt-2">
                                         <button onClick={() => updateLayerProp('flipX', !selectedLayer?.flipX, true)} className={`flex-1 py-2.5 rounded-xl border transition-all flex items-center justify-center gap-2 group ${selectedLayer?.flipX ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200'}`}>
                                             <FlipHorizontal size={14} /> <span className="text-[7px] font-black uppercase">Flip H</span>
@@ -207,9 +229,9 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
 
                             {/* CORNER RADIUS */}
                             <div className="space-y-3">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Box size={10}/> Framing</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Box size={10} /> Framing</span>
                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
-                                    <SmoothSlider label="CORNER RADIUS" min={0} max={200} value={selectedLayer?.border_radius || 0} onChange={(v: number, s: boolean) => updateLayerProp('border_radius', v, s)} unit="PX" icon={<Square size={10}/>} />
+                                    <SmoothSlider label="CORNER RADIUS" min={0} max={200} value={selectedLayer?.border_radius || 0} onChange={(v: number, s: boolean) => updateLayerProp('border_radius', v, s)} unit="PX" icon={<Square size={10} />} />
                                 </div>
                             </div>
                         </div>
@@ -224,7 +246,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                 {activeTab === 'grade' && (
                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                         <div className="flex items-center justify-between px-1">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Palette size={10}/> Color Correction</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Palette size={10} /> Color Correction</span>
                             <button onClick={resetEffects} className="text-[7px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"><RefreshCcw size={8} /> RESET</button>
                         </div>
 
@@ -232,8 +254,8 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                             {/* Light & Tone */}
                             <div className="space-y-4">
                                 <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">LIGHT & EXPOSURE</span>
-                                <SmoothSlider label="BRIGHTNESS" icon={<Sun size={10}/>} min={0} max={2} step={0.05} value={effects.brightness ?? 1} onChange={(v: number, s: boolean) => updateEffect('brightness', v, s)} />
-                                <SmoothSlider label="CONTRAST" icon={<Contrast size={10}/>} min={0} max={2} step={0.05} value={effects.contrast ?? 1} onChange={(v: number, s: boolean) => updateEffect('contrast', v, s)} />
+                                <SmoothSlider label="BRIGHTNESS" icon={<Sun size={10} />} min={0} max={2} step={0.05} value={effects.brightness ?? 1} onChange={(v: number, s: boolean) => updateEffect('brightness', v, s)} />
+                                <SmoothSlider label="CONTRAST" icon={<Contrast size={10} />} min={0} max={2} step={0.05} value={effects.contrast ?? 1} onChange={(v: number, s: boolean) => updateEffect('contrast', v, s)} />
                             </div>
 
                             <div className="h-px bg-slate-200/50" />
@@ -241,8 +263,8 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                             {/* Color */}
                             <div className="space-y-4">
                                 <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">COLOR BALANCE</span>
-                                <SmoothSlider label="SATURATION" icon={<Droplets size={10}/>} min={0} max={2} step={0.05} value={effects.saturate ?? 1} onChange={(v: number, s: boolean) => updateEffect('saturate', v, s)} />
-                                <SmoothSlider label="HUE SHIFT" icon={<RotateCw size={10}/>} min={0} max={360} value={effects.hueRotate ?? 0} onChange={(v: number, s: boolean) => updateEffect('hueRotate', v, s)} unit="°" />
+                                <SmoothSlider label="SATURATION" icon={<Droplets size={10} />} min={0} max={2} step={0.05} value={effects.saturate ?? 1} onChange={(v: number, s: boolean) => updateEffect('saturate', v, s)} />
+                                <SmoothSlider label="HUE SHIFT" icon={<RotateCw size={10} />} min={0} max={360} value={effects.hueRotate ?? 0} onChange={(v: number, s: boolean) => updateEffect('hueRotate', v, s)} unit="°" />
                             </div>
 
                             <div className="h-px bg-slate-200/50" />
@@ -250,9 +272,9 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                             {/* Filters */}
                             <div className="space-y-4">
                                 <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">ARTISTIC FILTERS</span>
-                                <SmoothSlider label="GRAYSCALE" icon={<Ghost size={10}/>} min={0} max={1} step={0.01} value={effects.grayscale ?? 0} onChange={(v: number, s: boolean) => updateEffect('grayscale', v, s)} unit="%" />
-                                <SmoothSlider label="SEPIA" icon={<Wind size={10}/>} min={0} max={1} step={0.01} value={effects.sepia ?? 0} onChange={(v: number, s: boolean) => updateEffect('sepia', v, s)} unit="%" />
-                                <SmoothSlider label="INVERT" icon={<RefreshCcw size={10}/>} min={0} max={1} step={0.01} value={effects.invert ?? 0} onChange={(v: number, s: boolean) => updateEffect('invert', v, s)} unit="%" />
+                                <SmoothSlider label="GRAYSCALE" icon={<Ghost size={10} />} min={0} max={1} step={0.01} value={effects.grayscale ?? 0} onChange={(v: number, s: boolean) => updateEffect('grayscale', v, s)} unit="%" />
+                                <SmoothSlider label="SEPIA" icon={<Wind size={10} />} min={0} max={1} step={0.01} value={effects.sepia ?? 0} onChange={(v: number, s: boolean) => updateEffect('sepia', v, s)} unit="%" />
+                                <SmoothSlider label="INVERT" icon={<RefreshCcw size={10} />} min={0} max={1} step={0.01} value={effects.invert ?? 0} onChange={(v: number, s: boolean) => updateEffect('invert', v, s)} unit="%" />
                             </div>
                         </div>
                     </div>
@@ -263,17 +285,17 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                         {/* OPACITY & BLEND */}
                         <div className="space-y-3">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Ghost size={10}/> Composite</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Ghost size={10} /> Composite</span>
                             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 shadow-inner">
                                 <SmoothSlider label="OPACITY" min={0} max={1} step={0.01} value={isBackground ? config.canvas.background_layer_opacity : (selectedLayer?.opacity ?? 1)} onChange={(v: number, s: boolean) => updateLayerProp('opacity', v, s)} unit="%" />
-                                
+
                                 {!isBackground && (
                                     <div className="space-y-2 pt-2 border-t border-slate-200/50">
                                         <span className="text-[6px] font-bold text-slate-400 uppercase tracking-wider">BLEND MODE</span>
                                         <div className="relative">
-                                            <select 
-                                                value={selectedLayer?.blend_mode || 'normal'} 
-                                                onChange={(e) => updateLayerProp('blend_mode', e.target.value, true)} 
+                                            <select
+                                                value={selectedLayer?.blend_mode || 'normal'}
+                                                onChange={(e) => updateLayerProp('blend_mode', e.target.value, true)}
                                                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[9px] font-black uppercase text-slate-700 outline-none appearance-none cursor-pointer hover:border-indigo-300 transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/20"
                                             >
                                                 {BLEND_MODES.map(mode => (
@@ -291,10 +313,10 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
 
                         {/* BLUR ENGINE */}
                         <div className="space-y-3">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Wind size={10}/> Softness</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 px-1"><Wind size={10} /> Softness</span>
                             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 shadow-inner">
                                 <SmoothSlider label="GAUSSIAN BLUR" min={0} max={60} value={isBackground ? config.canvas.background_layer_blur : (effects.blur ?? 0)} onChange={(v: number, s: boolean) => isBackground ? updateLayerProp('blur', v, s) : updateEffect('blur', v, s)} unit="PX" />
-                                
+
                                 {!isBackground && (
                                     <>
                                         <div className="h-px bg-slate-200/50" />
@@ -308,7 +330,7 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                         {!isBackground && (
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between px-1">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Layers size={10}/> Drop Shadow</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Layers size={10} /> Drop Shadow</span>
                                     <button onClick={resetShadow} className="text-[7px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"><RefreshCcw size={8} /> RESET</button>
                                 </div>
                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 shadow-inner">
@@ -318,13 +340,13 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                                             <input type="color" value={effects.dropShadowColor || '#000000'} onChange={(e) => updateEffect('dropShadowColor', e.target.value, true)} className="absolute inset-0 opacity-0 cursor-pointer" />
                                         </div>
                                     </div>
-                                    
+
                                     <SmoothSlider label="OPACITY" min={0} max={1} step={0.01} value={effects.dropShadowOpacity ?? 0.5} onChange={(v: number, s: boolean) => updateEffect('dropShadowOpacity', v, s)} unit="%" />
                                     <SmoothSlider label="BLUR (SPREAD)" min={0} max={100} value={effects.dropShadowBlur || 0} onChange={(v: number, s: boolean) => updateEffect('dropShadowBlur', v, s)} unit="PX" />
-                                    
+
                                     <div className="grid grid-cols-2 gap-4">
-                                        <SmoothSlider label="OFFSET X" min={-50} max={50} value={effects.dropShadowX || 0} onChange={(v: number, s: boolean) => updateEffect('dropShadowX', v, s)} unit="PX" icon={<MoveHorizontal size={10}/>} />
-                                        <SmoothSlider label="OFFSET Y" min={-50} max={50} value={effects.dropShadowY || 0} onChange={(v: number, s: boolean) => updateEffect('dropShadowY', v, s)} unit="PX" icon={<MoveVertical size={10}/>} />
+                                        <SmoothSlider label="OFFSET X" min={-50} max={50} value={effects.dropShadowX || 0} onChange={(v: number, s: boolean) => updateEffect('dropShadowX', v, s)} unit="PX" icon={<MoveHorizontal size={10} />} />
+                                        <SmoothSlider label="OFFSET Y" min={-50} max={50} value={effects.dropShadowY || 0} onChange={(v: number, s: boolean) => updateEffect('dropShadowY', v, s)} unit="PX" icon={<MoveVertical size={10} />} />
                                     </div>
                                 </div>
                             </div>
@@ -332,6 +354,44 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
                     </div>
                 )}
 
+                {/* --- TAB 4: FINISH (Clarity, Dehaze, Grain) --- */}
+                {activeTab === 'finish' && (
+                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Filter size={10} /> Technical Finish</span>
+                            <button onClick={resetEffects} className="text-[7px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"><RefreshCcw size={8} /> RESET</button>
+                        </div>
+
+                        <div className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 space-y-6 shadow-inner">
+                            {/* Texture */}
+                            <div className="space-y-4">
+                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">SURFACE TEXTURE</span>
+                                <SmoothSlider label="CLARITY" icon={<Target size={10} />} min={0} max={2} step={0.05} value={effects.clarity ?? 0} onChange={(v: number, s: boolean) => updateEffect('clarity', v, s)} />
+                                <SmoothSlider label="DEHAZE" icon={<Cloud size={10} />} min={0} max={2} step={0.05} value={effects.dehaze ?? 0} onChange={(v: number, s: boolean) => updateEffect('dehaze', v, s)} />
+                            </div>
+
+                            <div className="h-px bg-slate-200/50" />
+
+                            {/* Atmosphere */}
+                            <div className="space-y-4">
+                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">ATMOSPHERE</span>
+                                <SmoothSlider label="VIGNETTE" icon={<ImageIcon size={10} />} min={0} max={1} step={0.01} value={effects.vignette ?? 0} onChange={(v: number, s: boolean) => updateEffect('vignette', v, s)} unit="%" />
+                                <SmoothSlider label="FILM GRAIN" icon={<Cpu size={10} />} min={0} max={1} step={0.01} value={effects.grain ?? 0} onChange={(v: number, s: boolean) => updateEffect('grain', v, s)} unit="%" />
+                            </div>
+
+                            <div className="h-px bg-slate-200/50" />
+
+                            {/* Perspective Skew */}
+                            <div className="space-y-4">
+                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-wider block mb-2">PERSPECTIVE MAPPING</span>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <SmoothSlider label="SKEW X" icon={<Command size={10} />} min={-45} max={45} value={effects.skewX ?? 0} onChange={(v: number, s: boolean) => updateEffect('skewX', v, s)} unit="°" />
+                                    <SmoothSlider label="SKEW Y" icon={<Command size={10} />} min={-45} max={45} value={effects.skewY ?? 0} onChange={(v: number, s: boolean) => updateEffect('skewY', v, s)} unit="°" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

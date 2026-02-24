@@ -64,7 +64,7 @@ export interface GradientOverlay {
   blendMode: string;
   midpoint: number; // 0-100 Control the spread
   // New Alpha Channel Features
-  isMask?: boolean; 
+  isMask?: boolean;
   startOpacity?: number; // 0-1 Opacity for start stop
   endOpacity?: number;   // 0-1 Opacity for end stop
   startPoint?: { x: number; y: number }; // Normalized 0-1 coordinates
@@ -77,6 +77,7 @@ export interface ImageLayer {
   src: string;
   position_x: number;
   position_y: number;
+  position_z?: number;
   width: number;
   height: number;
   rotation: number;
@@ -110,6 +111,7 @@ export interface TextLayer {
   color: string;
   position_x: number;
   position_y: number;
+  position_z?: number;
   width: number;
   height: number;
   rotation: number;
@@ -189,6 +191,7 @@ export interface ShapeLayer {
   shape_type: 'rect' | 'circle' | 'triangle' | 'star' | 'line' | 'rounded-rect' | 'table' | 'custom_vector';
   position_x: number;
   position_y: number;
+  position_z?: number;
   width: number;
   height: number;
   rotation: number;
@@ -222,8 +225,8 @@ export interface ShapeLayer {
   table_text_size?: number;
   table_font?: string;
   table_text_color?: string;
-  table_row_heights?: number[]; 
-  table_col_widths?: number[];  
+  table_row_heights?: number[];
+  table_col_widths?: number[];
 }
 
 export interface StashAsset {
@@ -399,11 +402,11 @@ export interface AppConfig {
   image_layers: ImageLayer[];
   shapes: ShapeLayer[];
   model?: {
-    gallery: (string | null)[]; 
+    gallery: (string | null)[];
     camera_angle: string;
   };
   badge?: {
-    badge_text: string; 
+    badge_text: string;
     badge_style: string;
     badge_position_x: number;
     badge_position_y: number;
@@ -415,9 +418,9 @@ export interface AppConfig {
     sizes: string[];
     position_x: number;
     position_y: number;
-    color_bars: string[]; 
+    color_bars: string[];
     box_size: number;
-    style: string; 
+    style: string;
     locked: boolean;
     hidden: boolean;
   };
@@ -432,9 +435,9 @@ export interface AppConfig {
 export interface NoteDocument {
   id: string;
   title: string;
-  content: string; 
-  pages: string[]; 
-  originalSrc?: string; 
+  content: string;
+  pages: string[];
+  originalSrc?: string;
   timestamp: number;
   type: 'pdf' | 'text' | 'image' | 'web' | 'doc' | 'sheet';
   pageCount: number;

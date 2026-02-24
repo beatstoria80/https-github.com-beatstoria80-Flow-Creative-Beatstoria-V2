@@ -61,6 +61,17 @@ const getEffectsStyle = (effects?: LayerEffects) => {
     return filterList || 'none';
 };
 
+const get3DStyle = (rotation: number, effects?: LayerEffects, posZ: number = 0): React.CSSProperties => {
+    const transformStyle = 'preserve-3d' as const;
+    if (!effects) return { transform: `rotate(${rotation}deg) translateZ(${posZ}px)`, transformStyle };
+    const { rotateX = 0, rotateY = 0, skewX = 0, skewY = 0, perspective = 0 } = effects;
+    const p = perspective > 0 ? `perspective(${perspective}px) ` : '';
+    return {
+        transform: `${p}rotateZ(${rotation}deg) rotateX(${rotateX}deg) rotateY(${rotateY}deg) skew(${skewX}deg, ${skewY}deg) translateZ(${posZ}px)`,
+        transformStyle
+    };
+};
+
 const getFontStyle = (fontString: string) => {
     if (!fontString) return { fontFamily: 'Montserrat', fontWeight: 400 };
     const parts = fontString.split(' ');
@@ -380,13 +391,13 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             }}
             disableDragging={disableInteraction || layer.locked || isEditing}
             enableResizing={!disableInteraction && !layer.locked && !isEditing}
-            style={{ zIndex: zIndex, pointerEvents: 'auto' }}
+            style={{ zIndex: zIndex, pointerEvents: 'auto', transformStyle: 'preserve-3d' }}
             scale={scale}
             onMouseDown={onSelect}
             className={`selectable-layer layer-node-${layer.id} ${isGroupSelected ? 'pointer-events-none' : ''}`}
         >
             <div
-                style={{ width: '100%', height: '100%', transform: `rotate(${layer.rotation}deg)`, transformOrigin: 'center center' }}
+                style={{ width: '100%', height: '100%', ...get3DStyle(layer.rotation, layer.effects, layer.position_z), transformOrigin: 'center center' }}
                 onDoubleClick={(e) => {
                     if (!readOnly && !layer.locked && !isGroupSelected) {
                         e.stopPropagation();
@@ -753,8 +764,8 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     if (!finalFilter) finalFilter = undefined;
 
                     return (
-                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10 }} {...commonProps}>
-                            <div style={{ width: '100%', height: '100%', position: 'relative', transform: `rotate(${shape.rotation}deg)`, transformOrigin: 'center center' }}>
+                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10, transformStyle: 'preserve-3d' }} {...commonProps}>
+                            <div style={{ width: '100%', height: '100%', position: 'relative', ...get3DStyle(shape.rotation, shape.effects, shape.position_z), transformOrigin: 'center center' }}>
 
                                 {isGlassMode ? (
                                     <div
@@ -823,8 +834,8 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     } : {};
 
                     return (
-                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10 }} {...commonProps}>
-                            <div style={{ width: '100%', height: '100%', transform: `rotate(${img.rotation}deg)`, transformOrigin: 'center center' }}>
+                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10, transformStyle: 'preserve-3d' }} {...commonProps}>
+                            <div style={{ width: '100%', height: '100%', ...get3DStyle(img.rotation, img.effects, img.position_z), transformOrigin: 'center center' }}>
                                 <div style={{ width: '100%', height: '100%', opacity: img.opacity, mixBlendMode: img.blend_mode as any }}>
                                     <div style={{ width: '100%', height: '100%', ...maskStyle }}>
                                         <img src={img.src} style={{ width: '100%', height: '100%', pointerEvents: 'none', objectFit: 'cover', borderRadius: `${img.border_radius}px`, filter: img.effects_enabled ? getEffectsStyle(img.effects) : undefined, transform: `${img.flipX ? 'scaleX(-1)' : ''} ${img.flipY ? 'scaleY(-1)' : ''}` }} />

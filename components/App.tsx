@@ -201,8 +201,8 @@ export const App: React.FC = () => {
 
     const showToast = (msg: string) => { setToastMessage(msg); setTimeout(() => setToastMessage(null), 1500); };
 
-    const handleUndo = () => { if (appState.index > 0) { setAppState(prev => ({ ...prev, index: prev.index - 1 })); setSelectedIds([]); } };
-    const handleRedo = () => { if (appState.index < appState.history.length - 1) { setAppState(prev => ({ ...prev, index: prev.index + 1 })); setSelectedIds([]); } };
+    const handleUndo = () => { if (appState.index > 0) { setAppState(prev => ({ ...prev, index: prev.index - 1 })); setTimeout(() => setSelectedIds([]), 0); } };
+    const handleRedo = () => { if (appState.index < appState.history.length - 1) { setAppState(prev => ({ ...prev, index: prev.index + 1 })); setTimeout(() => setSelectedIds([]), 0); } };
     const handleStashResult = (src: string) => { if (!src) return; const newAsset: StashAsset = { id: `stash-${Date.now()}`, src: src, name: `GEN_${Date.now()}`, backup: true, timestamp: Date.now() }; setConfig(prev => ({ ...prev, stash: [newAsset, ...(prev.stash || [])] }), true); showToast("ASSET STASHED TO LIBRARY"); };
     const refreshLibrary = async () => { try { const libs = await getAllProjectsFromDB(); setProjectLibrary(libs); } catch (e) { } };
     const generateUniqueName = (baseName: string) => { const upperName = (baseName || "UNTITLED").toUpperCase().trim(); let finalName = upperName; let counter = 1; while (projectLibrary.some(p => p.name === finalName && p.id !== currentProjectId)) { counter++; finalName = `${upperName} V${counter}`; } return finalName; };
@@ -239,10 +239,13 @@ export const App: React.FC = () => {
                 locked: false,
                 hidden: false
             });
+            // Update selection after state has been committed
+            setTimeout(() => {
+                setSelectedIds([newGroupId]);
+                showToast("LAYERS GROUPED");
+            }, 0);
             return next;
         }, true);
-        setSelectedIds([newGroupId]);
-        showToast("LAYERS GROUPED");
     };
     const handleUndoGroup = () => {
         const groupsToUngroup = selectedIds.filter(id => id.startsWith('group-'));
@@ -255,10 +258,13 @@ export const App: React.FC = () => {
                 if (g) childIdsToSelect.push(...g.layerIds);
             });
             next.groups = next.groups.filter(g => !groupsToUngroup.includes(g.id));
+            // Update selection after state has been committed
+            setTimeout(() => {
+                setSelectedIds(Array.from(new Set(childIdsToSelect)));
+                showToast("LAYERS UNGROUPED");
+            }, 0);
             return next;
         }, true);
-        setSelectedIds(Array.from(new Set(childIdsToSelect)));
-        showToast("LAYERS UNGROUPED");
     };
 
     const handleApplyToCanvas = useCallback((src: string) => {
@@ -270,7 +276,7 @@ export const App: React.FC = () => {
             const newId = `image-${Date.now()}`;
             const newLayer: ImageLayer = { id: newId, src, position_x: (canvasW - w) / 2, position_y: (canvasH - h) / 2, width: w, height: h, rotation: 0, locked: false, hidden: false, opacity: 1, blend_mode: 'normal', effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0 };
             setConfig(prev => ({ ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] }), true);
-            setSelectedIds([newId]);
+            setTimeout(() => setSelectedIds([newId]), 0);
         };
         img.src = src;
     }, [activePageConfig, setConfig]);
@@ -311,10 +317,28 @@ export const App: React.FC = () => {
         setShowLanding(false); setShowNewProjectFlow(false); setIsBackendMenuOpen(false); localStorage.setItem('last_active_project_id', newId); setIsInitializing(false);
     };
 
-    const setActivePage = (index: number) => { setAppState(prev => { const newHist = [...prev.history]; newHist[prev.index] = { ...newHist[prev.index], activePageIndex: index }; return { ...prev, history: newHist }; }); setSelectedIds([]); };
-    const handleDuplicatePage = (index: number) => { setAppState(prev => { const current = prev.history[prev.index]; const pageToClone = current.pages[index]; const newPage = deepCopy(pageToClone); newPage.id = `page-${Date.now()}`; newPage.name = `${pageToClone.name} COPY`; const newPages = [...current.pages]; newPages.splice(index + 1, 0, newPage); const newState = { ...current, pages: newPages, activePageIndex: index + 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; }); setSelectedIds([]); };
-    const handleAddNewPage = () => { setAppState(prev => { const current = prev.history[prev.index]; const newPage = repairConfig(deepCopy(DEFAULT_CONFIG)); newPage.id = `page-${Date.now()}`; newPage.name = `ARTBOARD ${current.pages.length + 1}`; newPage.projectName = current.pages[0].projectName; const newPages = [...current.pages, newPage]; const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; }); setSelectedIds([]); };
-    const handleDeleteRequest = (targetId: string) => { if (currentState.pages.length <= 1) return; if (deleteConfirmId === targetId) { setAppState(prev => { const current = prev.history[prev.index]; const targetIndex = current.pages.findIndex(p => p.id === targetId); if (targetIndex === -1) return prev; const newPages = [...current.pages]; newPages.splice(targetIndex, 1); const nextActiveIndex = Math.min(Math.max(0, current.activePageIndex - (targetIndex <= current.activePageIndex ? 1 : 0)), newPages.length - 1); const newState = { ...current, pages: newPages, activePageIndex: nextActiveIndex }; const newHistoryUpdate = prev.history.slice(0, prev.index + 1); newHistoryUpdate.push(newState); return { history: newHistoryUpdate, index: newHistoryUpdate.length - 1 }; }); setDeleteConfirmId(null); setSelectedIds([]); } else { setDeleteConfirmId(targetId); } };
+    const setActivePage = (index: number) => {
+        setAppState(prev => { const newHist = [...prev.history]; newHist[prev.index] = { ...newHist[prev.index], activePageIndex: index }; return { ...prev, history: newHist }; });
+        setTimeout(() => setSelectedIds([]), 0);
+    };
+    const handleDuplicatePage = (index: number) => {
+        setAppState(prev => { const current = prev.history[prev.index]; const pageToClone = current.pages[index]; const newPage = deepCopy(pageToClone); newPage.id = `page-${Date.now()}`; newPage.name = `${pageToClone.name} COPY`; const newPages = [...current.pages]; newPages.splice(index + 1, 0, newPage); const newState = { ...current, pages: newPages, activePageIndex: index + 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
+        setTimeout(() => setSelectedIds([]), 0);
+    };
+    const handleAddNewPage = () => {
+        setAppState(prev => { const current = prev.history[prev.index]; const newPage = repairConfig(deepCopy(DEFAULT_CONFIG)); newPage.id = `page-${Date.now()}`; newPage.name = `ARTBOARD ${current.pages.length + 1}`; newPage.projectName = current.pages[0].projectName; const newPages = [...current.pages, newPage]; const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
+        setTimeout(() => setSelectedIds([]), 0);
+    };
+    const handleDeleteRequest = (targetId: string) => {
+        if (currentState.pages.length <= 1) return;
+        if (deleteConfirmId === targetId) {
+            setAppState(prev => { const current = prev.history[prev.index]; const targetIndex = current.pages.findIndex(p => p.id === targetId); if (targetIndex === -1) return prev; const newPages = [...current.pages]; newPages.splice(targetIndex, 1); const nextActiveIndex = Math.min(Math.max(0, current.activePageIndex - (targetIndex <= current.activePageIndex ? 1 : 0)), newPages.length - 1); const newState = { ...current, pages: newPages, activePageIndex: nextActiveIndex }; const newHistoryUpdate = prev.history.slice(0, prev.index + 1); newHistoryUpdate.push(newState); return { history: newHistoryUpdate, index: newHistoryUpdate.length - 1 }; });
+            setDeleteConfirmId(null);
+            setTimeout(() => setSelectedIds([]), 0);
+        } else {
+            setDeleteConfirmId(targetId);
+        }
+    };
     const handleRenamePage = (index: number, newName: string) => { setAppState(prev => { const current = prev.history[prev.index]; const newPages = [...current.pages]; newPages[index] = { ...newPages[index], name: newName.toUpperCase() }; const newState = { ...current, pages: newPages }; const newHistoryUpdate = [...prev.history]; newHistoryUpdate[prev.index] = newState; return { ...prev, history: newHistoryUpdate }; }); };
 
     const deleteConfirmIcon = <AlertTriangle size={12} />;
@@ -359,18 +383,12 @@ export const App: React.FC = () => {
     }, [selectedIds, activePageConfig]);
 
     const handlePaste = useCallback(() => {
-        console.log('handlePaste: Initializing paste.');
-        if (!clipboard || clipboard.layers.length === 0) {
-            console.log('handlePaste: Clipboard is empty.');
-            return;
-        }
-
-        const idMap = new Map<string, string>();
-        const newIds: string[] = [];
+        if (!clipboard || clipboard.layers.length === 0) return;
 
         setConfig(activeConfig => {
-            console.log('handlePaste: Updating config state.');
             const next = deepCopy(activeConfig);
+            const idMap = new Map<string, string>();
+            const newIds: string[] = [];
 
             clipboard.layers.forEach(l => {
                 const prefix = l.id.split('-')[0] || 'node';
@@ -384,7 +402,7 @@ export const App: React.FC = () => {
                     position_y: (l.position_y || 0) + 40
                 };
 
-                // Robust type detection
+                // Type detection
                 if ('src' in l) {
                     next.image_layers.push(newLayer);
                 } else if ('text' in l) {
@@ -408,13 +426,14 @@ export const App: React.FC = () => {
                 newIds.push(newGId);
             });
 
+            // Update selection after state has been committed
+            setTimeout(() => {
+                setSelectedIds(newIds);
+                showToast("PASTED LAYERS");
+            }, 0);
+
             return next;
         }, true);
-
-        // Update selection after state transition
-        console.log('handlePaste: Setting new selection IDs:', newIds);
-        setSelectedIds(newIds);
-        showToast("PASTED LAYERS");
     }, [clipboard, setConfig]);
 
     const handleSelection = (id: string | string[] | null, multi = false) => { if (!id) { setSelectedIds([]); return; } if (Array.isArray(id)) { setSelectedIds(id); return; } setSelectedIds(prev => multi ? (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]) : [id]); };
@@ -447,7 +466,7 @@ export const App: React.FC = () => {
 
             return next;
         }, true);
-        setSelectedIds([]);
+        setTimeout(() => setSelectedIds([]), 0);
     }, [selectedIds, setConfig]);
 
     const duplicateSelectedLayers = useCallback(() => {
@@ -558,7 +577,7 @@ export const App: React.FC = () => {
 
     const selectAllLayers = useCallback(() => {
         setConfig(prev => {
-            setSelectedIds(prev.layerOrder);
+            setTimeout(() => setSelectedIds(prev.layerOrder), 0);
             return prev;
         }, false);
     }, [setConfig]);

@@ -94,16 +94,7 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
 
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
-    const [isNavOpen, setIsNavOpen] = useState(false);
 
-    const protocols = [
-        { id: 'canvas', label: 'Space Canvas', icon: <Layout size={16} />, desc: 'Visual Workspace', active: false, onClick: onClose },
-        { id: 'story', label: 'Story Flow', icon: <Film size={16} />, desc: 'Narrative Designer', active: true, onClick: () => setIsNavOpen(false) },
-        { id: 'cooking', label: 'Space Cooking', icon: <Flame size={16} />, desc: 'Cooking Engine', active: false, onClick: () => { onOpenCooking?.(); setIsNavOpen(false); } },
-        { id: 'titan', label: 'Titan Fill', icon: <Wand2 size={16} />, desc: 'Generative Inpaint', active: false, onClick: () => { onOpenTitanFill?.(); setIsNavOpen(false); } },
-        { id: 'purge', label: 'Purge BG', icon: <Scissors size={16} />, desc: 'Neural Extraction', active: false, onClick: () => { onOpenPurgeBg?.(); setIsNavOpen(false); } },
-        { id: 'voice', label: 'Voice Lab', icon: <Mic size={16} />, desc: 'Neural Synthesis', active: false, onClick: () => { onOpenVoice?.(); setIsNavOpen(false); } },
-    ];
     const [isDragging, setIsDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
 
