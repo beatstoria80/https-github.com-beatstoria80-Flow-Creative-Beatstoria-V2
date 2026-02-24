@@ -658,4 +658,4 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
             </div>
         </div>
     );
-};
+});
