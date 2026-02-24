@@ -380,15 +380,25 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             key={layer.id}
             size={{ width: layer.width, height: layer.height }}
             position={{ x: layer.position_x, y: layer.position_y }}
-            // PERFORMANCE: Use pure drag updates without triggering heavy state logic until Stop
+            onDrag={(e, d) => {
+                onUpdate(layer.id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, false);
+            }}
             onDragStop={(e, d) => {
                 setInteractingId(null);
                 onUpdate(layer.id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, true);
             }}
+            onResize={(e, dir, ref, delta, pos) => {
+                onUpdate(layer.id, {
+                    width: Math.round(parseInt(ref.style.width)),
+                    height: Math.round(parseInt(ref.style.height)),
+                    position_x: Math.round(pos.x),
+                    position_y: Math.round(pos.y)
+                }, false);
+            }}
             onResizeStop={(e, dir, ref, delta, pos) => {
-                const newWidth = parseInt(ref.style.width);
-                const newHeight = parseInt(ref.style.height);
-                const updates: any = { width: newWidth, height: newHeight, ...pos };
+                const newWidth = Math.round(parseInt(ref.style.width));
+                const newHeight = Math.round(parseInt(ref.style.height));
+                const updates: any = { width: newWidth, height: newHeight, position_x: Math.round(pos.x), position_y: Math.round(pos.y) };
                 if (resizeMode === 'auto-width') updates.resize_mode = 'auto-height';
                 onUpdate(layer.id, updates, true);
             }}
@@ -577,7 +587,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         if (isDrag && data.x !== undefined && data.y !== undefined) {
             const deltaX = data.x - selectionRect.x;
             const deltaY = data.y - selectionRect.y;
-            const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
+            const updatePos = (l: any) => ({ ...l, position_x: Math.round(l.position_x + deltaX), position_y: Math.round(l.position_y + deltaY) });
             newConfig.image_layers = newConfig.image_layers.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
             newConfig.additional_texts = newConfig.additional_texts.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
             newConfig.shapes = (newConfig.shapes || []).map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
@@ -587,7 +597,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
             const updateSizePos = (l: any) => {
                 const relX = l.position_x - selectionRect.x;
                 const relY = l.position_y - selectionRect.y;
-                return { ...l, width: l.width * scaleX, height: l.height * scaleY, position_x: data.x! + (relX * scaleX), position_y: data.y! + (relY * scaleY), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
+                return { ...l, width: Math.round(l.width * scaleX), height: Math.round(l.height * scaleY), position_x: Math.round(data.x! + (relX * scaleX)), position_y: Math.round(data.y! + (relY * scaleY)), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
             };
             newConfig.image_layers = newConfig.image_layers.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
             newConfig.additional_texts = newConfig.additional_texts.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
@@ -606,7 +616,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         if (isDrag && data.x !== undefined && data.y !== undefined) {
             const deltaX = data.x - groupRect.x;
             const deltaY = data.y - groupRect.y;
-            const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
+            const updatePos = (l: any) => ({ ...l, position_x: Math.round(l.position_x + deltaX), position_y: Math.round(l.position_y + deltaY) });
             newConfig.image_layers = newConfig.image_layers.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
             newConfig.additional_texts = newConfig.additional_texts.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
             newConfig.shapes = (newConfig.shapes || []).map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
@@ -616,7 +626,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
             const updateSizePos = (l: any) => {
                 const relX = l.position_x - groupRect.x;
                 const relY = l.position_y - groupRect.y;
-                return { ...l, width: l.width * scaleX, height: l.height * scaleY, position_x: data.x! + (relX * scaleX), position_y: data.y! + (relY * scaleY), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
+                return { ...l, width: Math.round(l.width * scaleX), height: Math.round(l.height * scaleY), position_x: Math.round(data.x! + (relX * scaleX)), position_y: Math.round(data.y! + (relY * scaleY)), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
             };
             newConfig.image_layers = newConfig.image_layers.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
             newConfig.additional_texts = newConfig.additional_texts.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
@@ -724,16 +734,29 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     // PERFORMANCE: Set interaction state
                     onDragStart: (e: any) => { setInteractingId(id); e.stopPropagation(); },
                     onResizeStart: (e: any) => { setInteractingId(id); e.stopPropagation(); },
+                    onDrag: (e: any, d: any) => {
+                        updateLayer(id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, false);
+                    },
+                    onResize: (e: any, dir: any, ref: any, delta: any, pos: any) => {
+                        updateLayer(id, {
+                            width: Math.round(parseInt(ref.style.width)),
+                            height: Math.round(parseInt(ref.style.height)),
+                            position_x: Math.round(pos.x),
+                            position_y: Math.round(pos.y)
+                        }, false);
+                    },
                     onDragStop: (e: any, d: any) => {
                         setInteractingId(null);
                         updateLayer(id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, true);
                     },
                     onResizeStop: (e: any, dir: any, ref: any, delta: any, pos: any) => {
                         setInteractingId(null);
-                        const newWidth = Math.round(parseInt(ref.style.width));
-                        const newHeight = Math.round(parseInt(ref.style.height));
-                        const updates: any = { width: newWidth, height: newHeight, position_x: Math.round(pos.x), position_y: Math.round(pos.y) };
-                        updateLayer(id, updates, true);
+                        updateLayer(id, {
+                            width: Math.round(parseInt(ref.style.width)),
+                            height: Math.round(parseInt(ref.style.height)),
+                            position_x: Math.round(pos.x),
+                            position_y: Math.round(pos.y)
+                        }, true);
                     }
                 };
 
