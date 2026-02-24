@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
     Layout as LayoutIcon, Eye, EyeOff, Lock, Unlock,
     Type, Image as ImageIcon, Shapes, GripVertical,
