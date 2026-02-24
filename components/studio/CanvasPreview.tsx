@@ -262,9 +262,10 @@ interface TextLayerItemProps {
     onSelect: (e: any) => void;
     zIndex: number;
     isInteracting?: boolean;
+    setInteractingId: (id: string | null) => void;
 }
 
-const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGroupSelected, hideControls, readOnly, scale, onUpdate, onSelect, zIndex, isInteracting }) => {
+const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGroupSelected, hideControls, readOnly, scale, onUpdate, onSelect, zIndex, isInteracting, setInteractingId }) => {
     const textRef = useRef<HTMLDivElement>(null);
     const [isEditing, setIsEditing] = useState(false);
     const { fontFamily, fontWeight } = getFontStyle(layer.font);
@@ -790,14 +791,16 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     if (shape.shape_type === 'triangle') clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
                     if (shape.shape_type === 'star') clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
 
-                    let finalFilter = shape.effects_enabled ? getEffectsStyle(shape.effects) : '';
+                    let finalFilter: string | undefined = shape.effects_enabled ? getEffectsStyle(shape.effects) : undefined;
                     let finalBoxShadow = shadowStyle;
                     if ((shape.shape_type === 'triangle' || shape.shape_type === 'star') && shadowStyle) {
                         finalBoxShadow = undefined;
                         const ds = `drop-shadow(${shape.shadow_x ?? 0}px ${shape.shadow_y ?? 0}px ${shape.shadow_blur ?? 0}px ${shape.shadow_color ?? 'rgba(0,0,0,0.5)'})`;
-                        finalFilter = `${finalFilter} ${ds}`.trim();
+                        finalFilter = `${finalFilter || ''} ${ds}`.trim();
                     }
-                    if (!finalFilter) finalFilter = undefined;
+                    if (!finalFilter || finalFilter === 'none') {
+                        finalFilter = undefined;
+                    }
 
                     return (
                         <Rnd
@@ -902,7 +905,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
 
                 const txt = additional_texts.find(l => l.id === id);
                 if (txt && !txt.hidden) {
-                    return <TextLayerItem key={txt.id} layer={txt} zIndex={index + 10} isSelected={isSelected} isGroupSelected={isGroupSelected || isMultiSelection} hideControls={hideControls} readOnly={readOnly} scale={scale} onUpdate={updateLayer} onSelect={(e) => handleLayerMouseDown(txt.id, e)} isInteracting={isInteracting} />;
+                    return <TextLayerItem key={txt.id} layer={txt} zIndex={index + 10} isSelected={isSelected} isGroupSelected={isGroupSelected || isMultiSelection} hideControls={hideControls} readOnly={readOnly} scale={scale} onUpdate={updateLayer} onSelect={(e) => handleLayerMouseDown(txt.id, e)} isInteracting={isInteracting} setInteractingId={setInteractingId} />;
                 }
                 return null;
             })}

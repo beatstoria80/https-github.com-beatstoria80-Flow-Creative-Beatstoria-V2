@@ -149,15 +149,18 @@ export const EditorControls: React.FC<EditorControlsProps> = ({
     const SectionHeader = ({ id, label, icon, actions }: { id: string, label: string, icon: React.ReactNode, actions?: React.ReactNode }) => (
         <div
             onClick={() => handleSectionToggle(id)}
-            className={`flex items-center justify-between px-4 py-2.5 cursor-pointer border-b border-slate-50 transition-all ${activeSection === id ? 'bg-slate-900 text-white shadow-md' : 'hover:bg-slate-50/50 text-slate-400'}`}
+            className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b border-slate-50 transition-all duration-300 relative overflow-hidden group/header ${activeSection === id ? 'bg-slate-900 text-white shadow-[0_4px_20px_rgba(0,0,0,0.1)]' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-600'}`}
         >
-            <div className="flex items-center gap-3">
-                <div className={`transition-all duration-300 ${activeSection === id ? 'scale-110 text-indigo-400' : ''}`}>{icon}</div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
+            {activeSection === id && (
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 animate-in fade-in slide-in-from-left-4 duration-500" />
+            )}
+            <div className="flex items-center gap-3 relative z-10">
+                <div className={`transition-all duration-500 ${activeSection === id ? 'scale-110 text-indigo-400 rotate-[360deg]' : 'group-hover/header:scale-110 group-hover/header:rotate-12'}`}>{icon}</div>
+                <span className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${activeSection === id ? 'translate-x-1' : ''}`}>{label}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative z-10">
                 {actions}
-                <ChevronDown size={14} className={`transition-transform duration-500 ${activeSection === id ? 'rotate-180' : 'rotate-0 text-slate-300'}`} />
+                <ChevronDown size={14} className={`transition-all duration-500 ${activeSection === id ? 'rotate-180 text-white' : 'rotate-0 text-slate-300 group-hover/header:text-slate-500'}`} />
             </div>
         </div>
     );
@@ -262,15 +265,20 @@ export const EditorControls: React.FC<EditorControlsProps> = ({
                     <SectionHeader id="canvas" label="ENVIRONMENT" icon={<Maximize2 size={16} />} />
                     {activeSection === 'canvas' && (
                         <div className="p-3 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex p-1 bg-slate-100 rounded-xl gap-0.5 shadow-inner border border-slate-200/50">
+                            <div className="flex p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl gap-1 shadow-inner border border-slate-200/50 relative">
                                 {[
                                     { id: 'surface', label: 'FILL', icon: <Palette size={11} /> },
                                     { id: 'geometry', label: 'SIZE', icon: <Layout size={11} /> },
                                     { id: 'grids', label: 'GRID', icon: <Grid3X3 size={11} /> },
                                     { id: 'hud', label: 'GUIDE', icon: <Ruler size={11} /> },
                                 ].map(t => (
-                                    <button key={t.id} onClick={(e) => { e.stopPropagation(); setSpaceTab(t.id as any); }} className={`flex-1 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all ${spaceTab === t.id ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
-                                        {t.icon}<span className="text-[6px] font-black uppercase tracking-tight">{t.label}</span>
+                                    <button
+                                        key={t.id}
+                                        onClick={(e) => { e.stopPropagation(); setSpaceTab(t.id as any); }}
+                                        className={`flex-1 py-2 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-300 relative z-10 ${spaceTab === t.id ? 'bg-white text-indigo-600 shadow-md scale-[1.02] border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}`}
+                                    >
+                                        <div className={`transition-transform duration-500 ${spaceTab === t.id ? 'scale-110' : ''}`}>{t.icon}</div>
+                                        <span className="text-[6px] font-black uppercase tracking-tight">{t.label}</span>
                                     </button>
                                 ))}
                             </div>

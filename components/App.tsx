@@ -329,6 +329,23 @@ export const App: React.FC = () => {
         setAppState(prev => { const current = prev.history[prev.index]; const newPage = repairConfig(deepCopy(DEFAULT_CONFIG)); newPage.id = `page-${Date.now()}`; newPage.name = `ARTBOARD ${current.pages.length + 1}`; newPage.projectName = current.pages[0].projectName; const newPages = [...current.pages, newPage]; const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
         setTimeout(() => setSelectedIds([]), 0);
     };
+    const handleDuplicateAllPages = () => {
+        setAppState(prev => {
+            const current = prev.history[prev.index];
+            const clonedPages = current.pages.map(p => {
+                const clone = deepCopy(p);
+                clone.id = `page-${Date.now()}-${Math.random()}`;
+                clone.name = `${p.name} CLONE`;
+                return clone;
+            });
+            const newPages = [...current.pages, ...clonedPages];
+            const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 };
+            const newHist = [...prev.history.slice(0, prev.index + 1), newState];
+            return { history: newHist, index: newHist.length - 1 };
+        });
+        setTimeout(() => setSelectedIds([]), 0);
+    };
+
     const handleDeleteRequest = (targetId: string) => {
         if (currentState.pages.length <= 1) return;
         if (deleteConfirmId === targetId) {
@@ -862,8 +879,9 @@ export const App: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <button onClick={() => setIsNoteLMOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-white'}`}><BookOpen size={14} /> NOTE LM</button>
-                                <button onClick={() => setIsExportOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}><Download size={14} /> EXPORT UHD</button>
+                                <button onClick={() => setIsNoteLMOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-white'}`} title="Neural Brain Engine"><BookOpen size={14} /> NOTE LM</button>
+                                <button onClick={handleDuplicateAllPages} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`} title="Duplicate All Artboards"><Copy size={14} /> CLONE ALL</button>
+                                <button onClick={() => setIsExportOpen(true)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-all ${theme === 'dark' ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`} title="Master UHD Export"><Download size={14} /> EXPORT UHD</button>
                             </div>
                         </div>
 
@@ -882,19 +900,48 @@ export const App: React.FC = () => {
                                                 <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border shadow-sm transition-all cursor-pointer ${isActive ? (theme === 'dark' ? 'bg-black border-indigo-500 text-white' : 'bg-white border-indigo-200 text-slate-900') : (theme === 'dark' ? 'bg-black/60 border-white/10' : 'bg-white/60 border-slate-200')}`} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
                                                     <Layout size={14} className="text-indigo-500" /><input type="text" value={pageConfig.name} onChange={(e) => handleRenamePage(pageIndex, e.target.value)} onKeyDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} className={`bg-transparent border-none focus:ring-0 text-[10px] font-black uppercase tracking-widest outline-none w-24 ${isActive ? (theme === 'dark' ? 'text-white' : 'text-slate-700') : 'text-slate-50'}`} />
                                                 </div>
-                                                <div className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border shadow-sm transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover/artboard:opacity-100'} ${theme === 'dark' ? 'bg-black/90 border-white/10' : 'bg-white/90 border-slate-200'}`} onMouseDown={(e) => e.stopPropagation()}>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleExportSinglePage(pageIndex, 'HD'); }} className="flex items-center gap-1.5 px-2 py-1 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-all">
-                                                        <MonitorDown size={12} />
-                                                        <span className="text-[7px] font-black">1080P</span>
+                                                <div
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 shadow-2xl transition-all ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 group-hover/artboard:opacity-100 group-hover/artboard:scale-100'} ${theme === 'dark' ? 'bg-black/95 border-white/20' : 'bg-white border-slate-300'} z-[2000]`}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleExportSinglePage(pageIndex, 'HD'); }}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1 text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all active:scale-90"
+                                                        title="Export as PNG Image"
+                                                    >
+                                                        <MonitorDown size={14} />
+                                                        <span className="text-[8px] font-black uppercase">1080P</span>
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDuplicatePage(pageIndex); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg">
-                                                        <Copy size={12} />
+
+                                                    <div className={`w-[1px] h-4 mx-1 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-100'}`} />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleDuplicatePage(pageIndex); }}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
+                                                        title="Duplicate this Artboard (Clone)"
+                                                    >
+                                                        <Copy size={14} />
+                                                        <span className="text-[8px] font-black uppercase">Clone</span>
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleAddNewPage(); }} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg">
-                                                        <Plus size={12} />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleAddNewPage(); }}
+                                                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all active:scale-90"
+                                                        title="Add New Blank Artboard"
+                                                    >
+                                                        <Plus size={14} />
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteRequest(pageConfig.id); }} className={`p-1.5 rounded-lg transition-all ${deleteConfirmId === pageConfig.id ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 hover:text-red-600'}`}>
-                                                        {deleteConfirmId === pageConfig.id ? deleteConfirmIcon : <Trash2 size={12} />}
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteRequest(pageConfig.id); }}
+                                                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-all active:scale-90 ${deleteConfirmId === pageConfig.id ? 'bg-red-500 text-white shadow-lg animate-pulse' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}
+                                                        title={deleteConfirmId === pageConfig.id ? "Click again to confirm delete" : "Delete Artboard"}
+                                                    >
+                                                        {deleteConfirmId === pageConfig.id ? <><AlertTriangle size={14} /><span className="text-[8px] font-black">PURGE?</span></> : <Trash2 size={14} />}
                                                     </button>
                                                 </div>
                                             </div>
