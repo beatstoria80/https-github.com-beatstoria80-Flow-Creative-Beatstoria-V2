@@ -65,7 +65,7 @@ interface EditorControlsProps {
     onRenamePage: (index: number, name: string) => void;
 }
 
-const TungkuIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
+const TungkuIcon = React.memo(({ size = 24, className = "" }: { size?: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
         <path d="M5 8C5 6.89543 5.89543 6 7 6H17C18.1046 6 19 6.89543 19 8V9H5V8Z" fill="currentColor" />
         <path d="M6 10H18V12C18 14.7614 15.7614 17 13 17H11C8.23858 17 6 14.7614 6 12V10Z" fill="currentColor" />
@@ -73,9 +73,9 @@ const TungkuIcon = ({ size = 24, className = "" }: { size?: number, className?: 
         <path d="M15 17L17 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <path d="M8 4H16V5C16 5.55228 15.5523 6 15 6H9C8.44772 6 8 5.55228 8 5V4Z" fill="currentColor" />
     </svg>
-);
+));
 
-const PatternPreview = ({ pattern, color }: { pattern: string, color?: string }) => {
+const PatternPreview = React.memo(({ pattern, color }: { pattern: string, color?: string }) => {
     if (pattern === 'none') return <div className="w-full h-full bg-slate-50 flex items-center justify-center text-[6px] font-black text-slate-300">NONE</div>;
     const finalColor = color || (pattern === 'blueprint' ? 'rgba(0,168,255,0.4)' : 'rgba(0,0,0,0.4)');
     let bg = '';
@@ -89,7 +89,38 @@ const PatternPreview = ({ pattern, color }: { pattern: string, color?: string })
     else if (pattern === 'noise-static') { bg = `url("${NOISE_TEXTURE}")`; size = '60px 60px'; }
     else if (pattern === 'circuit-board') { bg = `radial-gradient(${finalColor} 2px, transparent 2px), radial-gradient(${finalColor} 2px, transparent 2px)`; size = '30px 30px'; }
     return <div className="w-full h-full opacity-50" style={{ backgroundImage: bg, backgroundSize: size }} />;
-};
+});
+
+const MySectionHeader = React.memo(({ id, label, icon, actions, isActive, onToggle }: { id: string, label: string, icon: React.ReactNode, actions?: React.ReactNode, isActive: boolean, onToggle: (id: string) => void }) => (
+    <div
+        onClick={() => onToggle(id)}
+        className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b border-slate-50 transition-[background-color,color,box-shadow] duration-200 relative overflow-hidden group/header ${isActive ? 'bg-slate-900 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-600'}`}
+    >
+        {isActive && (
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 animate-in fade-in slide-in-from-left-4 duration-300" />
+        )}
+        <div className="flex items-center gap-3 relative z-10">
+            <div className={`transition-transform duration-300 ${isActive ? 'scale-110 text-indigo-400' : 'group-hover/header:rotate-12'}`}>{icon}</div>
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] transition-transform duration-200 ${isActive ? 'translate-x-1' : ''}`}>{label}</span>
+        </div>
+        <div className="flex items-center gap-2 relative z-10">
+            {actions}
+            <ChevronDown size={14} className={`transition-transform duration-300 ${isActive ? 'rotate-180 text-white' : 'rotate-0 text-slate-300 group-hover/header:text-slate-500'}`} />
+        </div>
+    </div>
+));
+
+const MyControlLabel = React.memo(({ label, icon, value, onChange, min, max, step = 1, unit = "" }: any) => (
+    <div className="flex flex-col gap-1.5 py-1.5 group">
+        <div className="flex items-center justify-between px-1">
+            <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-900 transition-colors flex items-center gap-1.5">{icon} {label}</span>
+            <div className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 min-w-[32px] text-center"><span className="text-indigo-600 font-mono text-[8px] font-black">{unit === '%' ? Math.round((value || 0) * 100) : (value || 0)}{unit}</span></div>
+        </div>
+        <div className="px-1"><input type="range" min={min} max={max} step={step} value={value || 0} onChange={(e) => onChange(Number(e.target.value))} onMouseUp={(e) => onChange(Number((e.target as any).value), true)} className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 shadow-inner" /></div>
+    </div>
+));
+
+
 
 export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
     config, setConfig, selectedId, selectedIds, onSelectLayer, collapsed, onExpand, onHome,
@@ -115,15 +146,15 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
         setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, ...updates } }), save);
     }, [setConfig]);
 
-    const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBgImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const reader = new FileReader();
             reader.onload = (ev) => { if (ev.target?.result) updateCanvas({ background_image: ev.target.result as string }, true); };
             reader.readAsDataURL(e.target.files[0]);
         }
-    };
+    }, [updateCanvas]);
 
-    const handleUploadLayer = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUploadLayer = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const reader = new FileReader();
             reader.onload = (ev) => {
@@ -148,40 +179,12 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
             };
             reader.readAsDataURL(e.target.files[0]);
         }
-    };
+    }, [config.canvas.width, config.canvas.height, onSelectLayer, setConfig]);
 
-    const handleSectionToggle = (id: string) => {
+    const handleSectionToggle = useCallback((id: string) => {
         setActiveSection(prev => prev === id ? null : id);
-    };
+    }, []);
 
-    const SectionHeader = ({ id, label, icon, actions }: { id: string, label: string, icon: React.ReactNode, actions?: React.ReactNode }) => (
-        <div
-            onClick={() => handleSectionToggle(id)}
-            className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b border-slate-50 transition-all duration-300 relative overflow-hidden group/header ${activeSection === id ? 'bg-slate-900 text-white shadow-[0_4px_20px_rgba(0,0,0,0.1)]' : 'hover:bg-slate-50 text-slate-400 hover:text-slate-600'}`}
-        >
-            {activeSection === id && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 animate-in fade-in slide-in-from-left-4 duration-500" />
-            )}
-            <div className="flex items-center gap-3 relative z-10">
-                <div className={`transition-all duration-500 ${activeSection === id ? 'scale-110 text-indigo-400 rotate-[360deg]' : 'group-hover/header:scale-110 group-hover/header:rotate-12'}`}>{icon}</div>
-                <span className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${activeSection === id ? 'translate-x-1' : ''}`}>{label}</span>
-            </div>
-            <div className="flex items-center gap-2 relative z-10">
-                {actions}
-                <ChevronDown size={14} className={`transition-all duration-500 ${activeSection === id ? 'rotate-180 text-white' : 'rotate-0 text-slate-300 group-hover/header:text-slate-500'}`} />
-            </div>
-        </div>
-    );
-
-    const ControlLabel = ({ label, icon, value, onChange, min, max, step = 1, unit = "" }: any) => (
-        <div className="flex flex-col gap-1.5 py-1.5 group">
-            <div className="flex items-center justify-between px-1">
-                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-900 transition-colors flex items-center gap-1.5">{icon} {label}</span>
-                <div className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 min-w-[32px] text-center"><span className="text-indigo-600 font-mono text-[8px] font-black">{unit === '%' ? Math.round((value || 0) * 100) : (value || 0)}{unit}</span></div>
-            </div>
-            <div className="px-1"><input type="range" min={min} max={max} step={step} value={value || 0} onChange={(e) => onChange(Number(e.target.value))} onMouseUp={(e) => onChange(Number((e.target as any).value), true)} className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 shadow-inner" /></div>
-        </div>
-    );
 
     if (collapsed) {
         return (
@@ -270,10 +273,11 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                         )}
                     </div>
 
-                    <SectionHeader id="canvas" label="ENVIRONMENT" icon={<Maximize2 size={16} />} />
+                    <MySectionHeader id="canvas" label="ENVIRONMENT" icon={<Maximize2 size={16} />} isActive={activeSection === 'canvas'} onToggle={handleSectionToggle} />
                     {activeSection === 'canvas' && (
-                        <div className="p-3 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl gap-1 shadow-inner border border-slate-200/50 relative">
+                        <div className="p-3 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex p-1 bg-slate-100 rounded-xl gap-1 shadow-inner border border-slate-200/50 relative">
+
                                 {[
                                     { id: 'surface', label: 'FILL', icon: <Palette size={11} /> },
                                     { id: 'geometry', label: 'SIZE', icon: <Layout size={11} /> },
@@ -293,7 +297,7 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                             {spaceTab === 'geometry' && (
                                 <div className="space-y-4 animate-in slide-in-from-right-2 duration-300">
                                     <div className="space-y-2"><span className="text-[7px] font-black text-slate-400 uppercase tracking-widest px-1">Project Identity</span><input type="text" value={config.projectName || "UNTITLED PROJECT"} onChange={(e) => setConfig(prev => ({ ...prev, projectName: e.target.value }), true)} className="w-full bg-slate-50 border-b-2 border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-800 outline-none transition-all uppercase tracking-wide" placeholder="ENTER PROJECT NAME" /></div>
-                                    <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-inner"><ControlLabel label="Width" icon={<MoveHorizontal size={10} />} value={canvas.width} onChange={(v: number, s: boolean) => updateCanvas({ width: v }, s)} min={100} max={4000} /><ControlLabel label="Height" icon={<MoveVertical size={10} />} value={canvas.height} onChange={(v: number, s: boolean) => updateCanvas({ height: v }, s)} min={100} max={4000} /></div>
+                                    <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-inner"><MyControlLabel label="Width" icon={<MoveHorizontal size={10} />} value={canvas.width} onChange={(v: number, s: boolean) => updateCanvas({ width: v }, s)} min={100} max={4000} /><MyControlLabel label="Height" icon={<MoveVertical size={10} />} value={canvas.height} onChange={(v: number, s: boolean) => updateCanvas({ height: v }, s)} min={100} max={4000} /></div>
                                     <div className="grid grid-cols-2 gap-2">{ASPECT_RATIOS.map(r => (<button key={r.value} onClick={() => updateCanvas({ width: r.width, height: r.height }, true)} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all group shadow-sm"><div className="flex flex-col text-left"><span className="text-[8px] font-black uppercase text-slate-700 group-hover:text-indigo-600 tracking-wider">{r.label}</span><span className="text-[6px] font-bold text-slate-400">{r.width}x{r.height}</span></div><div className="text-slate-300 group-hover:text-indigo-400">{r.value === '1:1' ? <Square size={12} /> : r.value === '4:5' ? <Layout size={12} /> : r.value === '9:16' ? <Smartphone size={12} /> : <Monitor size={12} />}</div></button>))}</div>
                                 </div>
                             )}
@@ -378,18 +382,20 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                                 </div>
                             )}
                             {spaceTab === 'grids' && (
-                                <div className="space-y-4 animate-in slide-in-from-right-2 duration-300"><div className="space-y-3"><div className="flex items-center justify-between px-1"><span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Grid3X3 size={9} /> Patterns</span><div className="w-5 h-5 rounded-md border border-slate-200 overflow-hidden relative shadow-sm" style={{ backgroundColor: canvas.background_pattern_color || '#000000' }}><input type="color" value={canvas.background_pattern_color || '#000000'} onChange={(e) => updateCanvas({ background_pattern_color: e.target.value }, true)} className="absolute inset-0 opacity-0 cursor-pointer scale-150" /></div></div><div className="grid grid-cols-2 gap-2">{PATTERNS.slice(0, 6).map(p => { const isSelected = canvas.background_pattern === p; return (<button key={p} onClick={() => updateCanvas({ background_pattern: p }, true)} className={`group relative flex flex-col aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'border-indigo-600 bg-indigo-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:border-indigo-200'}`}><div className="flex-1 w-full bg-slate-50/50 relative overflow-hidden"><PatternPreview pattern={p} color={canvas.background_pattern_color} /></div><div className={`w-full py-1.5 flex items-center justify-center border-t transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}><span className="text-[7px] font-black uppercase tracking-widest truncate px-1">{p.replace(/-/g, ' ')}</span></div></button>); })}</div></div><ControlLabel label="Density" icon={<Hash size={9} />} value={canvas.background_pattern_opacity || 0.1} min={0} max={1} step={0.01} onChange={(v: number, s: boolean) => updateCanvas({ background_pattern_opacity: v }, s)} unit="%" /></div>
+                                <div className="space-y-4 animate-in slide-in-from-right-2 duration-300"><div className="space-y-3"><div className="flex items-center justify-between px-1"><span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Grid3X3 size={9} /> Patterns</span><div className="w-5 h-5 rounded-md border border-slate-200 overflow-hidden relative shadow-sm" style={{ backgroundColor: canvas.background_pattern_color || '#000000' }}><input type="color" value={canvas.background_pattern_color || '#000000'} onChange={(e) => updateCanvas({ background_pattern_color: e.target.value }, true)} className="absolute inset-0 opacity-0 cursor-pointer scale-150" /></div></div><div className="grid grid-cols-2 gap-2">{PATTERNS.slice(0, 6).map(p => { const isSelected = canvas.background_pattern === p; return (<button key={p} onClick={() => updateCanvas({ background_pattern: p }, true)} className={`group relative flex flex-col aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'border-indigo-600 bg-indigo-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:border-indigo-200'}`}><div className="flex-1 w-full bg-slate-50/50 relative overflow-hidden"><PatternPreview pattern={p} color={canvas.background_pattern_color} /></div><div className={`w-full py-1.5 flex items-center justify-center border-t transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}><span className="text-[7px] font-black uppercase tracking-widest truncate px-1">{p.replace(/-/g, ' ')}</span></div></button>); })}</div></div><MyControlLabel label="Density" icon={<Hash size={9} />} value={canvas.background_pattern_opacity || 0.1} min={0} max={1} step={0.01} onChange={(v: number, s: boolean) => updateCanvas({ background_pattern_opacity: v }, s)} unit="%" /></div>
                             )}
                             {spaceTab === 'hud' && (
-                                <div className="space-y-4 animate-in slide-in-from-right-2 duration-300"><div className="grid grid-cols-3 gap-2">{[{ id: 'show_rulers', label: 'RULERS', icon: <Maximize2 size={12} /> }, { id: 'show_guides', label: 'GUIDES', icon: <Monitor size={12} /> }, { id: 'show_grid', label: 'GRID', icon: <Grid3X3 size={12} /> }].map(opt => { const val = !!(canvas as any)[opt.id]; return (<button key={opt.id} onClick={() => updateCanvas({ [opt.id]: !val }, true)} className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all duration-300 ${val ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-300 shadow-sm'}`}><div className={val ? 'scale-110' : ''}>{opt.icon}</div><span className="text-[7px] font-black uppercase tracking-[0.1em]">{opt.label}</span></button>); })}</div><div className="p-3 bg-slate-50/50 border border-slate-100 rounded-xl space-y-2 shadow-inner"><ControlLabel label="Print Safe Area" icon={<Target size={9} />} min={0} max={200} step={4} value={canvas.safe_area || 0} onChange={(v: number, s: boolean) => updateCanvas({ safe_area: v }, s)} unit="PX" /><div className="h-px bg-slate-100" /><ControlLabel label="Aid Intensity" icon={<Wind size={9} />} min={0} max={1} step={0.1} value={canvas.guide_opacity || 0} onChange={(v: number, s: boolean) => updateCanvas({ guide_opacity: v }, s)} unit="%" /></div></div>
+                                <div className="space-y-4 animate-in slide-in-from-right-2 duration-300"><div className="grid grid-cols-3 gap-2">{[{ id: 'show_rulers', label: 'RULERS', icon: <Maximize2 size={12} /> }, { id: 'show_guides', label: 'GUIDES', icon: <Monitor size={12} /> }, { id: 'show_grid', label: 'GRID', icon: <Grid3X3 size={12} /> }].map(opt => { const val = !!(canvas as any)[opt.id]; return (<button key={opt.id} onClick={() => updateCanvas({ [opt.id]: !val }, true)} className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all duration-300 ${val ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-300 shadow-sm'}`}><div className={val ? 'scale-110' : ''}>{opt.icon}</div><span className="text-[7px] font-black uppercase tracking-[0.1em]">{opt.label}</span></button>); })}</div><div className="p-3 bg-slate-50/50 border border-slate-100 rounded-xl space-y-2 shadow-inner"><MyControlLabel label="Print Safe Area" icon={<Target size={9} />} min={0} max={200} step={4} value={canvas.safe_area || 0} onChange={(v: number, s: boolean) => updateCanvas({ safe_area: v }, s)} unit="PX" /><div className="h-px bg-slate-100" /><MyControlLabel label="Aid Intensity" icon={<Wind size={9} />} min={0} max={1} step={0.1} value={canvas.guide_opacity || 0} onChange={(v: number, s: boolean) => updateCanvas({ guide_opacity: v }, s)} unit="%" /></div></div>
                             )}
                         </div>
                     )}
 
-                    <SectionHeader
+                    <MySectionHeader
                         id="layers"
                         label="LAYERS"
                         icon={<List size={16} />}
+                        isActive={activeSection === 'layers'}
+                        onToggle={handleSectionToggle}
                         actions={activeSection === 'layers' && (
                             <div className="flex items-center gap-1 mr-2" onClick={e => e.stopPropagation()}>
                                 <button onClick={onGroup} disabled={selectedIds.length < 2} className="p-1 bg-slate-800 text-white rounded hover:bg-indigo-600 transition-colors disabled:opacity-30" title="Group"><FolderPlus size={10} /></button>
@@ -399,46 +405,48 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                         )}
                     />
                     {activeSection === 'layers' && (
-                        <LayersPanel
-                            config={config}
-                            setConfig={setConfig}
-                            selectedIds={selectedIds}
-                            onSelectLayer={onSelectLayer}
-                            isVisible={true}
-                            setIsVisible={() => { }}
-                            onGroup={onGroup}
-                            onUngroup={onUngroup}
-                            onMerge={onMerge}
-                            allPages={allPages}
-                            activePageIndex={activePageIndex}
-                            onSelectPage={onSelectPage}
-                            onDeletePage={onDeletePage}
-                            onDuplicatePage={onDuplicatePage}
-                            onAddPage={onAddPage}
-                            onRenamePage={onRenamePage}
-                        />
+                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <LayersPanel
+                                config={config}
+                                setConfig={setConfig}
+                                selectedIds={selectedIds}
+                                onSelectLayer={onSelectLayer}
+                                isVisible={true}
+                                setIsVisible={() => { }}
+                                onGroup={onGroup}
+                                onUngroup={onUngroup}
+                                onMerge={onMerge}
+                                allPages={allPages}
+                                activePageIndex={activePageIndex}
+                                onSelectPage={onSelectPage}
+                                onDeletePage={onDeletePage}
+                                onDuplicatePage={onDuplicatePage}
+                                onAddPage={onAddPage}
+                                onRenamePage={onRenamePage}
+                            />
+                        </div>
                     )}
-                    <SectionHeader id="image-editor" label="IMAGE EDITOR" icon={<Sliders size={16} />} />
+                    <MySectionHeader id="image-editor" label="IMAGE EDITOR" icon={<Sliders size={16} />} isActive={activeSection === 'image-editor'} onToggle={handleSectionToggle} />
                     {activeSection === 'image-editor' && (
                         (() => {
                             const effectiveId = selectedId || (config.canvas.background_image ? 'bg-layer' : null);
                             if (effectiveId && (effectiveId === 'bg-layer' || config.image_layers.some(l => l.id === effectiveId))) {
-                                return (<div className="animate-in fade-in slide-in-from-left-4 duration-300">{effectiveId === 'bg-layer' && <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-center gap-2"><ImageIcon size={10} className="text-indigo-50" /><span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Editing Background Layer</span></div>}<ImageEditorEngine config={config} setConfig={setConfig} selectedId={effectiveId} onSelectLayer={onSelectLayer} /></div>);
+                                return (<div className="animate-in fade-in slide-in-from-left-4 duration-200">{effectiveId === 'bg-layer' && <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-center gap-2"><ImageIcon size={10} className="text-indigo-50" /><span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Editing Background Layer</span></div>}<ImageEditorEngine config={config} setConfig={setConfig} selectedId={effectiveId} onSelectLayer={onSelectLayer} /></div>);
                             } else {
                                 return (<div className="p-8 text-center flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-2xl mx-4 my-2 border-2 border-dashed border-slate-200 group hover:border-indigo-400 transition-all cursor-pointer" onClick={() => layerInputRef.current?.click()}><div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg text-slate-300 group-hover:text-indigo-50 transition-all"><Upload size={20} strokeWidth={2.5} /></div><p className="text-[9px] font-black text-slate-700 uppercase tracking-widest">No Image Active</p></div>);
                             }
                         })()
                     )}
-                    <SectionHeader id="typography" label="TYPEFACE" icon={<Type size={16} />} />
-                    {activeSection === 'typography' && (<TypographyEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} handleAddTextLayer={(text) => { }} onOpenTypefaceStudio={onOpenTypefaceStudio} />)}
-                    <SectionHeader id="shapes" label="GEOMETRY" icon={<Shapes size={16} />} />
-                    {activeSection === 'shapes' && <ShapeVectorEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} penToolMode={penToolMode} setPenToolMode={setPenToolMode} />}
-                    <SectionHeader id="masking" label="MASKING" icon={<Scissors size={16} />} />
-                    {activeSection === 'masking' && (isImageSelected && selectedId !== 'bg-layer' ? (<MaskEngine config={config} setConfig={setConfig} selectedId={selectedId} />) : (<div className="p-6 text-center flex flex-col items-center justify-center gap-3 bg-slate-50/50 rounded-xl mx-4 my-2 border border-dashed border-slate-200"><Scissors size={18} className="text-slate-300" /><p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Select foreground image node</p></div>))}
-                    <SectionHeader id="fx-engine" label="NEURAL FX" icon={<Zap size={16} />} />
-                    {activeSection === 'fx-engine' && <FXEngine config={config} setConfig={setConfig} selectedId={selectedId} />}
-                    <SectionHeader id="asset" label="ASSETS" icon={<Box size={16} />} />
-                    {activeSection === 'asset' && <AssetEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} onOpenBgRemover={onOpenBgRemover} onOpenNanoUpscaler={onOpenNanoUpscaler} onOpenNanoGen={onOpenNanoGen} onOpenRetouch={onOpenRetouch} />}
+                    <MySectionHeader id="typography" label="TYPEFACE" icon={<Type size={16} />} isActive={activeSection === 'typography'} onToggle={handleSectionToggle} />
+                    {activeSection === 'typography' && (<div className="animate-in fade-in duration-200"><TypographyEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} handleAddTextLayer={(text) => { }} onOpenTypefaceStudio={onOpenTypefaceStudio} /></div>)}
+                    <MySectionHeader id="shapes" label="GEOMETRY" icon={<Shapes size={16} />} isActive={activeSection === 'shapes'} onToggle={handleSectionToggle} />
+                    {activeSection === 'shapes' && <div className="animate-in fade-in duration-200"><ShapeVectorEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} penToolMode={penToolMode} setPenToolMode={setPenToolMode} /></div>}
+                    <MySectionHeader id="masking" label="MASKING" icon={<Scissors size={16} />} isActive={activeSection === 'masking'} onToggle={handleSectionToggle} />
+                    {activeSection === 'masking' && (isImageSelected && selectedId !== 'bg-layer' ? (<div className="animate-in fade-in duration-200"><MaskEngine config={config} setConfig={setConfig} selectedId={selectedId} /></div>) : (<div className="p-6 text-center flex flex-col items-center justify-center gap-3 bg-slate-50/50 rounded-xl mx-4 my-2 border border-dashed border-slate-200"><Scissors size={18} className="text-slate-300" /><p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Select foreground image node</p></div>))}
+                    <MySectionHeader id="fx-engine" label="NEURAL FX" icon={<Zap size={16} />} isActive={activeSection === 'fx-engine'} onToggle={handleSectionToggle} />
+                    {activeSection === 'fx-engine' && <div className="animate-in fade-in duration-200"><FXEngine config={config} setConfig={setConfig} selectedId={selectedId} /></div>}
+                    <MySectionHeader id="asset" label="ASSETS" icon={<Box size={16} />} isActive={activeSection === 'asset'} onToggle={handleSectionToggle} />
+                    {activeSection === 'asset' && <div className="animate-in fade-in duration-200"><AssetEngine config={config} setConfig={setConfig} selectedId={selectedId} onSelectLayer={onSelectLayer} onOpenBgRemover={onOpenBgRemover} onOpenNanoUpscaler={onOpenNanoUpscaler} onOpenNanoGen={onOpenNanoGen} onOpenRetouch={onOpenRetouch} /></div>}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 z-[120] border-t border-slate-100 bg-white p-2 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]"><div className="flex items-center justify-center bg-slate-50 p-1 rounded-lg"><button onClick={onToggleAssistant} className={`flex-1 py-1.5 flex justify-center rounded-md transition-all ${isAssistantOpen ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`} title="Neural Assistant"><MessageSquare size={13} /></button></div></div>

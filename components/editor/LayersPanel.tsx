@@ -30,7 +30,7 @@ interface LayersPanelProps {
 }
 
 // Internal Component: Double-Tap Delete Button (Trash UI)
-const DeleteConfirmButton = ({ onDelete, className, title = "Delete" }: { onDelete: () => void, className?: string, title?: string }) => {
+const DeleteConfirmButton = React.memo(({ onDelete, className, title = "Delete" }: { onDelete: () => void, className?: string, title?: string }) => {
     const [status, setStatus] = useState<'idle' | 'confirm'>('idle');
 
     useEffect(() => {
@@ -58,12 +58,14 @@ const DeleteConfirmButton = ({ onDelete, className, title = "Delete" }: { onDele
             {status === 'confirm' ? <AlertTriangle size={14} className="animate-pulse" /> : <Trash2 size={14} />}
         </button>
     );
-};
+});
 
-export const LayersPanel: React.FC<LayersPanelProps> = ({
+
+export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
     config, setConfig, selectedIds, onSelectLayer, onGroup, onUngroup, onMerge,
     allPages, activePageIndex, onSelectPage, onDeletePage, onDuplicatePage, onAddPage, onRenamePage
 }) => {
+
     const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
     const [editName, setEditName] = useState("");
     const [lastActiveId, setLastActiveId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
     const renderedGroups = useRef(new Set<string>());
     renderedGroups.current.clear();
 
-    const handleLayerClick = (id: string, e: React.MouseEvent) => {
+    const handleLayerClick = useCallback((id: string, e: React.MouseEvent) => {
         e.stopPropagation();
 
         if (e.shiftKey && lastActiveId && sortedLayers.includes(lastActiveId) && sortedLayers.includes(id)) {
@@ -101,9 +103,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
         onSelectLayer(id, false);
         setLastActiveId(id);
-    };
+    }, [lastActiveId, sortedLayers, onSelectLayer]);
 
-    const toggleVisibility = (id: string, e: React.MouseEvent | null) => {
+
+    const toggleVisibility = useCallback((id: string, e: React.MouseEvent | null) => {
         e?.stopPropagation();
         setConfig(prev => {
             if (id === 'global-fx') return { ...prev, canvas: { ...prev.canvas, global_effects_enabled: !prev.canvas.global_effects_enabled } };
@@ -114,9 +117,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 shapes: (prev.shapes || []).map(l => l.id === id ? { ...l, hidden: !l.hidden } : l)
             };
         }, true);
-    };
+    }, [setConfig]);
 
-    const toggleLock = (id: string, e: React.MouseEvent | null) => {
+
+    const toggleLock = useCallback((id: string, e: React.MouseEvent | null) => {
         e?.stopPropagation();
         setConfig(prev => {
             if (id === 'global-fx') return { ...prev, canvas: { ...prev.canvas, global_effects_locked: !prev.canvas.global_effects_locked } };
@@ -127,9 +131,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 shapes: (prev.shapes || []).map(l => l.id === id ? { ...l, locked: !l.locked } : l)
             };
         }, true);
-    };
+    }, [setConfig]);
 
-    const moveLayer = (id: string, direction: 'up' | 'down', e: React.MouseEvent | null) => {
+
+    const moveLayer = useCallback((id: string, direction: 'up' | 'down', e: React.MouseEvent | null) => {
         e?.stopPropagation();
         if (id === 'global-fx') return;
 
@@ -144,27 +149,30 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
             return { ...prev, layerOrder: order };
         }, true);
-    };
+    }, [setConfig]);
 
-    const moveLayerToFront = (id: string, e: React.MouseEvent | null) => {
+
+    const moveLayerToFront = useCallback((id: string, e: React.MouseEvent | null) => {
         e?.stopPropagation();
         if (id === 'global-fx') return;
         setConfig(prev => {
             const order = prev.layerOrder.filter(lid => lid !== id);
             return { ...prev, layerOrder: [...order, id] };
         }, true);
-    };
+    }, [setConfig]);
 
-    const moveLayerToBack = (id: string, e: React.MouseEvent | null) => {
+
+    const moveLayerToBack = useCallback((id: string, e: React.MouseEvent | null) => {
         e?.stopPropagation();
         if (id === 'global-fx') return;
         setConfig(prev => {
             const order = prev.layerOrder.filter(lid => lid !== id);
             return { ...prev, layerOrder: [id, ...order] };
         }, true);
-    };
+    }, [setConfig]);
 
-    const deleteLayer = (id: string) => {
+
+    const deleteLayer = useCallback((id: string) => {
         if (id === 'global-fx') {
             setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, global_effects: { ...DEFAULT_EFFECTS } } }), true);
             return;
@@ -179,9 +187,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             groups: prev.groups.map(g => ({ ...g, layerIds: g.layerIds.filter(lid => lid !== id) })).filter(g => g.layerIds.length > 0)
         }), true);
         onSelectLayer(null);
-    };
+    }, [onSelectLayer, setConfig]);
 
-    const toggleGroupVisibility = (groupId: string, e: React.MouseEvent) => {
+
+    const toggleGroupVisibility = useCallback((groupId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setConfig(prev => {
             const group = prev.groups.find(g => g.id === groupId);
@@ -197,9 +206,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 shapes: (prev.shapes || []).map(l => group.layerIds.includes(l.id) ? { ...l, hidden: newHidden } : l)
             };
         }, true);
-    };
+    }, [setConfig]);
 
-    const toggleGroupLock = (groupId: string, e: React.MouseEvent) => {
+
+    const toggleGroupLock = useCallback((groupId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setConfig(prev => {
             const group = prev.groups.find(g => g.id === groupId);
@@ -215,9 +225,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 shapes: (prev.shapes || []).map(l => group.layerIds.includes(l.id) ? { ...l, locked: newLocked } : l)
             };
         }, true);
-    };
+    }, [setConfig]);
 
-    const deleteGroup = (groupId: string) => {
+
+    const deleteGroup = useCallback((groupId: string) => {
         setConfig(prev => {
             const group = prev.groups.find(g => g.id === groupId);
             if (!group) return prev;
@@ -234,9 +245,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             };
         }, true);
         onSelectLayer(null);
-    };
+    }, [onSelectLayer, setConfig]);
 
-    const getLayerData = (id: string) => {
+
+    const getLayerData = useCallback((id: string) => {
         const group = config.groups?.find(g => g.layerIds.includes(id));
 
         if (id === 'global-fx') {
@@ -260,9 +272,10 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         }
 
         return { name: 'UNKNOWN NODE', type: 'unknown', icon: <Fingerprint size={14} />, hidden: false, locked: false, system: false, group };
-    };
+    }, [config.groups, config.canvas, config.image_layers, config.additional_texts, config.shapes]);
 
-    const handleRename = (id: string, newName: string) => {
+
+    const handleRename = useCallback((id: string, newName: string) => {
         if (!newName.trim()) return;
         setConfig(prev => {
             const next = { ...prev };
@@ -301,35 +314,40 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             return next;
         }, true);
         setEditingLayerId(null);
-    };
+    }, [setConfig]);
 
-    const startEditing = (id: string, currentName: string, e: React.MouseEvent) => {
+
+    const startEditing = useCallback((id: string, currentName: string, e: React.MouseEvent) => {
         e?.stopPropagation();
         if (id === 'global-fx') return;
         setEditingLayerId(id);
         setEditName(currentName);
-    };
+    }, []);
 
-    const saveEditing = () => {
+
+    const saveEditing = useCallback(() => {
         if (editingLayerId) {
             handleRename(editingLayerId, editName);
         } else {
             setEditingLayerId(null);
         }
-    };
+    }, [editingLayerId, editName, handleRename]);
 
-    const toggleGroupCollapse = (groupId: string) => {
+
+    const toggleGroupCollapse = useCallback((groupId: string) => {
         setConfig(prev => ({
             ...prev,
             groups: prev.groups.map(g => g.id === groupId ? { ...g, collapsed: !g.collapsed } : g)
         }), true);
-    };
+    }, [setConfig]);
 
-    const selectGroup = (groupId: string, layerIds: string[]) => {
+
+    const selectGroup = useCallback((groupId: string, layerIds: string[]) => {
         if (layerIds.length > 0) {
             onSelectLayer(layerIds);
         }
-    };
+    }, [onSelectLayer]);
+
 
     return (
         <div className="flex flex-col h-full bg-white animate-fadeIn select-none relative">
