@@ -381,7 +381,10 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             size={{ width: layer.width, height: layer.height }}
             position={{ x: layer.position_x, y: layer.position_y }}
             // PERFORMANCE: Use pure drag updates without triggering heavy state logic until Stop
-            onDragStop={(e, d) => onUpdate(layer.id, { position_x: d.x, position_y: d.y }, true)}
+            onDragStop={(e, d) => {
+                setInteractingId(null);
+                onUpdate(layer.id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, true);
+            }}
             onResizeStop={(e, dir, ref, delta, pos) => {
                 const newWidth = parseInt(ref.style.width);
                 const newHeight = parseInt(ref.style.height);
@@ -391,9 +394,10 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             }}
             disableDragging={disableInteraction || layer.locked || isEditing}
             enableResizing={!disableInteraction && !layer.locked && !isEditing}
-            style={{ zIndex: zIndex, pointerEvents: 'auto', transformStyle: 'preserve-3d' }}
+            style={{ zIndex: zIndex, pointerEvents: 'auto', transformStyle: 'preserve-3d', transition: 'none' }}
             scale={scale}
-            onMouseDown={onSelect}
+            onDragStart={() => setInteractingId(layer.id)}
+            onMouseDown={(e) => { e.stopPropagation(); onSelect(e); }}
             className={`selectable-layer layer-node-${layer.id} ${isGroupSelected ? 'pointer-events-none' : ''}`}
         >
             <div
@@ -655,8 +659,14 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 willChange: 'transform' // Improve scrolling performance
             }}
             onMouseDown={handleContainerMouseDown}
-            className={`cursor-default relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'}`}
+            className={`cursor-default relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'} ${interactingId ? 'is-dragging select-none' : ''}`}
         >
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .is-dragging * { pointer-events: none !important; }
+                .is-dragging .selectable-layer, .is-dragging .selectable-layer * { pointer-events: auto !important; }
+                .is-dragging .react-draggable-dragging { pointer-events: auto !important; z-index: 99999 !important; }
+            ` }} />
             <div className="absolute inset-0 z-0" style={{ transform: 'translate3d(0,0,0)', pointerEvents: 'none', backgroundColor: canvas.background_color || '#ffffff' }}>
                 {bgImage && <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: bgImage, backgroundSize: 'cover', backgroundPosition: 'center', opacity: canvas.background_layer_opacity ?? 1, filter: `blur(${canvas.background_layer_blur ?? 0}px)` }} />}
                 {patternStyle.backgroundImage && <div className="absolute inset-0 pointer-events-none z-0" style={{ ...patternStyle, opacity: canvas.background_pattern_opacity ?? 0.1 }} />}
@@ -712,14 +722,17 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     cancel: ".no-drag",
                     className: `selectable-layer layer-node-${id} ${disableInteraction ? 'pointer-events-none' : ''}`,
                     // PERFORMANCE: Set interaction state
-                    onDragStart: () => setInteractingId(id),
-                    onResizeStart: () => setInteractingId(id),
-                    onDragStop: (e: any, d: any) => { setInteractingId(null); updateLayer(id, { position_x: d.x, position_y: d.y }, true); },
+                    onDragStart: (e: any) => { setInteractingId(id); e.stopPropagation(); },
+                    onResizeStart: (e: any) => { setInteractingId(id); e.stopPropagation(); },
+                    onDragStop: (e: any, d: any) => {
+                        setInteractingId(null);
+                        updateLayer(id, { position_x: Math.round(d.x), position_y: Math.round(d.y) }, true);
+                    },
                     onResizeStop: (e: any, dir: any, ref: any, delta: any, pos: any) => {
                         setInteractingId(null);
-                        const newWidth = parseInt(ref.style.width);
-                        const newHeight = parseInt(ref.style.height);
-                        const updates: any = { width: newWidth, height: newHeight, ...pos };
+                        const newWidth = Math.round(parseInt(ref.style.width));
+                        const newHeight = Math.round(parseInt(ref.style.height));
+                        const updates: any = { width: newWidth, height: newHeight, position_x: Math.round(pos.x), position_y: Math.round(pos.y) };
                         updateLayer(id, updates, true);
                     }
                 };
@@ -764,7 +777,15 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     if (!finalFilter) finalFilter = undefined;
 
                     return (
-                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10, transformStyle: 'preserve-3d' }} {...commonProps}>
+                        <Rnd
+                            key={id}
+                            size={{ width: shape.width, height: height }}
+                            position={{ x: shape.position_x || 0, y: shape.position_y || 0 }}
+                            disableDragging={disableInteraction || shape.locked}
+                            enableResizing={!disableInteraction && !shape.locked}
+                            style={{ zIndex: index + 10, transformStyle: 'preserve-3d', transition: 'none' }}
+                            {...commonProps}
+                        >
                             <div style={{ width: '100%', height: '100%', position: 'relative', ...get3DStyle(shape.rotation, shape.effects, shape.position_z), transformOrigin: 'center center' }}>
 
                                 {isGlassMode ? (
@@ -834,7 +855,16 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     } : {};
 
                     return (
-                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10, transformStyle: 'preserve-3d' }} {...commonProps}>
+                        <Rnd
+                            key={id}
+                            size={{ width: img.width, height: img.height }}
+                            position={{ x: img.position_x || 0, y: img.position_y || 0 }}
+                            lockAspectRatio={true}
+                            disableDragging={disableInteraction || img.locked}
+                            enableResizing={!disableInteraction && !img.locked}
+                            style={{ zIndex: index + 10, transformStyle: 'preserve-3d', transition: 'none' }}
+                            {...commonProps}
+                        >
                             <div style={{ width: '100%', height: '100%', ...get3DStyle(img.rotation, img.effects, img.position_z), transformOrigin: 'center center' }}>
                                 <div style={{ width: '100%', height: '100%', opacity: img.opacity, mixBlendMode: img.blend_mode as any }}>
                                     <div style={{ width: '100%', height: '100%', ...maskStyle }}>
