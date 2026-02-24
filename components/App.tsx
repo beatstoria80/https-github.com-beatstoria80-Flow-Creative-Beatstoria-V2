@@ -952,7 +952,17 @@ export const App: React.FC = () => {
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className={`relative shadow-2xl rounded-sm transition-all duration-300 ${isActive ? 'ring-2 ring-indigo-500/20' : 'grayscale-[0.5]'}`} style={{ width: pageConfig.canvas.width * zoom, height: pageConfig.canvas.height * zoom }} onMouseDown={(e) => { e.stopPropagation(); if (!isActive) setActivePage(pageIndex); }}>
+                                            <div
+                                                className={`relative shadow-2xl rounded-sm transition-all duration-300 ${isActive ? 'ring-2 ring-indigo-500/20' : 'grayscale-[0.5]'}`}
+                                                style={{ width: pageConfig.canvas.width * zoom, height: pageConfig.canvas.height * zoom }}
+                                                onMouseDown={(e) => {
+                                                    // Allow middle click or Hand tool / Space pan to bubble up to parent panning handler
+                                                    if (e.button !== 1 && !isSpacePressed && penToolMode !== 'hand') {
+                                                        e.stopPropagation();
+                                                        if (!isActive) setActivePage(pageIndex);
+                                                    }
+                                                }}
+                                            >
                                                 <CanvasPreview
                                                     domId={`canvas-export-${pageConfig.id}`}
                                                     config={pageConfig}

@@ -265,7 +265,7 @@ interface TextLayerItemProps {
     setInteractingId: (id: string | null) => void;
 }
 
-const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGroupSelected, hideControls, readOnly, scale, onUpdate, onSelect, zIndex, isInteracting, setInteractingId }) => {
+const TextLayerItem: React.FC<TextLayerItemProps> = React.memo(({ layer, isSelected, isGroupSelected, hideControls, readOnly, scale, onUpdate, onSelect, zIndex, isInteracting, setInteractingId }) => {
     const textRef = useRef<HTMLDivElement>(null);
     const [isEditing, setIsEditing] = useState(false);
     const { fontFamily, fontWeight } = getFontStyle(layer.font);
@@ -397,6 +397,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
                 }, false);
             }}
             onResizeStop={(e, dir, ref, delta, pos) => {
+                setInteractingId(null);
                 const newWidth = Math.round(parseInt(ref.style.width));
                 const newHeight = Math.round(parseInt(ref.style.height));
                 const updates: any = { width: newWidth, height: newHeight, position_x: Math.round(pos.x), position_y: Math.round(pos.y) };
@@ -407,7 +408,8 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             enableResizing={!disableInteraction && !layer.locked && !isEditing}
             style={{ zIndex: zIndex, pointerEvents: 'auto', transformStyle: 'preserve-3d', transition: 'none' }}
             scale={scale}
-            onDragStart={() => setInteractingId(layer.id)}
+            onDragStart={(e) => { setInteractingId(layer.id); e.stopPropagation(); }}
+            onResizeStart={(e) => { setInteractingId(layer.id); e.stopPropagation(); }}
             onMouseDown={(e) => { e.stopPropagation(); onSelect(e); }}
             className={`selectable-layer layer-node-${layer.id} ${isGroupSelected ? 'pointer-events-none' : ''}`}
         >
@@ -505,7 +507,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
             </div>
         </Rnd>
     );
-};
+});
 
 export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onUpdate, selectedIds, onSelect, readOnly, hideControls, domId, onFocusCanvas, isActive }) => {
     const { canvas, image_layers, additional_texts, shapes, layerOrder, groups } = config;

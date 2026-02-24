@@ -91,7 +91,7 @@ const PatternPreview = ({ pattern, color }: { pattern: string, color?: string })
     return <div className="w-full h-full opacity-50" style={{ backgroundImage: bg, backgroundSize: size }} />;
 };
 
-export const EditorControls: React.FC<EditorControlsProps> = ({
+export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
     config, setConfig, selectedId, selectedIds, onSelectLayer, collapsed, onExpand, onHome,
     penToolMode, setPenToolMode, onOpenBgRemover, onOpenNanoUpscaler, onOpenNanoGen, onOpenRetouch, onOpenTitanFill, onOpenTypefaceStudio,
     onOpenNoteLM, onOpenVoiceStudio, onOpenCineEngine, onOpenSpaceCampaign, onOpenPodcastStudio,
@@ -446,4 +446,4 @@ export const EditorControls: React.FC<EditorControlsProps> = ({
             <input type="file" ref={layerInputRef} onChange={(e) => handleUploadLayer(e)} className="hidden" accept="image/*" />
         </div>
     );
-};
+});
