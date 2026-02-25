@@ -770,8 +770,9 @@ const DocumentVisualizer: React.FC<{
     doc: NoteDocument;
     isDark: boolean;
     onContentChange: (newContent: string) => void;
+    onApplyVisual: (src: string) => void;
     isMultiMode: boolean;
-}> = ({ doc, isDark, onContentChange, isMultiMode }) => {
+}> = ({ doc, isDark, onContentChange, onApplyVisual, isMultiMode }) => {
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const renderTasks = useRef<any[]>([]);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -796,6 +797,7 @@ const DocumentVisualizer: React.FC<{
 
     const [jumpValue, setJumpValue] = useState("1");
     const [editValue, setEditValue] = useState(doc.content);
+    const [isAdded, setIsAdded] = useState(false);
 
     useEffect(() => {
         setEditValue(doc.content);
@@ -1162,6 +1164,21 @@ const DocumentVisualizer: React.FC<{
                                                 ref={el => { canvasRefs.current[i] = el; }}
                                                 className="max-w-[85vw] max-h-[90vh] object-contain transition-all duration-500"
                                             />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-all flex items-center justify-center backdrop-blur-[1px]">
+                                                <button
+                                                    onClick={() => {
+                                                        const canvas = canvasRefs.current[i];
+                                                        if (canvas) {
+                                                            onApplyVisual(canvas.toDataURL('image/png'));
+                                                            setIsAdded(true);
+                                                            setTimeout(() => setIsAdded(false), 2000);
+                                                        }
+                                                    }}
+                                                    className={`px-6 py-3 rounded-none font-black text-[10px] uppercase tracking-widest transition-all ${isAdded ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-white text-black hover:scale-105 active:scale-95 shadow-2xl'}`}
+                                                >
+                                                    {isAdded ? 'DEPLOYED' : 'Inject Page'}
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="px-6 py-2 rounded-none bg-black/60 backdrop-blur-xl text-[11px] font-black text-white/50 border border-white/10 opacity-0 group-hover/page:opacity-100 transition-all shadow-2xl shrink-0">
                                             HALAMAN {pageNum}
@@ -1170,7 +1187,17 @@ const DocumentVisualizer: React.FC<{
                                 );
                             })
                         ) : doc.type === 'image' ? (
-                            <img src={doc.originalSrc} className="max-w-[85vw] max-h-[85vh] object-contain shadow-[0_80px_160px_-40px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none" draggable={false} />
+                            <div className="relative group animate-in zoom-in-95 duration-700">
+                                <img src={doc.originalSrc} className="max-w-[85vw] max-h-[85vh] object-contain shadow-[0_80px_160px_-40px_rgba(0,0,0,0.8)] border border-white/5" draggable={false} />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[1px]">
+                                    <button
+                                        onClick={() => { onApplyVisual(doc.originalSrc!); setIsAdded(true); setTimeout(() => setIsAdded(false), 2000); }}
+                                        className={`px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${isAdded ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-white text-black hover:scale-105 active:scale-95 shadow-2xl'}`}
+                                    >
+                                        {isAdded ? 'DEPLOYED TO CANVAS' : 'Inject to Board'}
+                                    </button>
+                                </div>
+                            </div>
                         ) : doc.type === 'sheet' ? (
                             <div className="w-full h-full min-h-screen flex flex-col overflow-hidden shadow-2xl">
                                 <GoogleSheetsEditor filename={doc.title} initialData={doc.content} isDark={isDark} onSave={(data) => onContentChange(data)} />
@@ -1544,7 +1571,7 @@ export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onO
                             <div className={`flex-1 overflow-hidden grid ${activeDocs.length === 1 ? 'grid-cols-1' : (activeDocs.length === 2 ? 'grid-cols-2' : (activeDocs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 overflow-y-auto studio-scrollbar'))} divide-x transition-colors ${isDark ? 'bg-[#0a0a0a] divide-white/5' : 'bg-slate-200 divide-slate-300'}`}>
                                 {activeDocs.map((doc) => (
                                     <div key={doc.id} className="h-full flex flex-col overflow-hidden relative">
-                                        <DocumentVisualizer doc={doc} isDark={isDark} onContentChange={(newContent) => handleContentUpdate(doc.id, newContent)} isMultiMode={activeDocs.length > 1} />
+                                        <DocumentVisualizer doc={doc} isDark={isDark} onContentChange={(newContent) => handleContentUpdate(doc.id, newContent)} onApplyVisual={onApplyVisual} isMultiMode={activeDocs.length > 1} />
                                     </div>
                                 ))}
                             </div>

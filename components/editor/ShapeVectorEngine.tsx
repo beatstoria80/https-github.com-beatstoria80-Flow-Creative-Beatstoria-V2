@@ -127,7 +127,6 @@ export const ShapeVectorEngine: React.FC<ShapeVectorEngineProps> = ({ config, se
     };
 
     const updateShape = (key: keyof ShapeLayer, value: any, save = false) => {
-        if (!selectedShape) return;
         setConfig(prev => ({
             ...prev,
             shapes: (prev.shapes || []).map(s => s.id === selectedId ? { ...s, [key]: value } : s)
@@ -135,64 +134,82 @@ export const ShapeVectorEngine: React.FC<ShapeVectorEngineProps> = ({ config, se
     };
 
     const toggleGradient = (enabled: boolean) => {
-        if (!selectedShape) return;
+        setConfig(prev => {
+            const s = prev.shapes?.find(x => x.id === selectedId);
+            if (!s) return prev;
 
-        const hasValidStops = selectedShape.gradient_stops && Array.isArray(selectedShape.gradient_stops) && selectedShape.gradient_stops.length >= 2;
+            const hasValidStops = s.gradient_stops && Array.isArray(s.gradient_stops) && s.gradient_stops.length >= 2;
+            const currentStops = hasValidStops
+                ? [
+                    { ...s.gradient_stops![0], position: 0, opacity: 0, alpha: s.gradient_stops![0].alpha ?? 1 },
+                    { ...s.gradient_stops![1], position: 1, opacity: 1, alpha: s.gradient_stops![1].alpha ?? 1 }
+                ]
+                : [{ color: s.fill_color || '#3B82F6', position: 0, opacity: 0, alpha: 1 }, { color: '#ffffff', position: 1, opacity: 1, alpha: 1 }];
 
-        const currentStops = hasValidStops
-            ? [
-                { ...selectedShape.gradient_stops![0], position: 0, opacity: 0, alpha: selectedShape.gradient_stops![0].alpha ?? 1 },
-                { ...selectedShape.gradient_stops![1], position: 1, opacity: 1, alpha: selectedShape.gradient_stops![1].alpha ?? 1 }
-            ]
-            : [{ color: selectedShape.fill_color || '#3B82F6', position: 0, opacity: 0, alpha: 1 }, { color: '#ffffff', position: 1, opacity: 1, alpha: 1 }];
-
-        setConfig(prev => ({
-            ...prev,
-            shapes: (prev.shapes || []).map(s => s.id === selectedId ? {
-                ...s,
-                gradient_enabled: enabled,
-                gradient_stops: enabled ? currentStops : s.gradient_stops
-            } : s)
-        }), true);
+            return {
+                ...prev,
+                shapes: prev.shapes.map(x => x.id === selectedId ? {
+                    ...x,
+                    gradient_enabled: enabled,
+                    gradient_stops: enabled ? currentStops : x.gradient_stops
+                } : x)
+            };
+        }, true);
     };
 
     const updateEffect = (key: string, value: any, save = false) => {
-        if (!selectedShape) return;
-        const newEffects = { ...selectedShape.effects, [key]: value };
-        updateShape('effects', newEffects, save);
+        setConfig(prev => {
+            const s = prev.shapes?.find(x => x.id === selectedId);
+            if (!s) return prev;
+            const newEffects = { ...s.effects, [key]: value };
+            return {
+                ...prev,
+                shapes: prev.shapes.map(x => x.id === selectedId ? { ...x, effects: newEffects } : x)
+            };
+        }, save);
     };
 
     const updateGradientStop = (index: number, updates: any, save = false) => {
-        if (!selectedShape) return;
-        const baseStops = (selectedShape.gradient_stops && selectedShape.gradient_stops.length > 0)
-            ? selectedShape.gradient_stops
-            : [{ color: '#000000', opacity: 0, position: 0, alpha: 1 }, { color: '#ffffff', opacity: 1, position: 1, alpha: 1 }];
+        setConfig(prev => {
+            const s = prev.shapes?.find(x => x.id === selectedId);
+            if (!s) return prev;
 
-        const stops = [...baseStops];
+            const baseStops = (s.gradient_stops && s.gradient_stops.length > 0)
+                ? s.gradient_stops
+                : [{ color: '#000000', opacity: 0, position: 0, alpha: 1 }, { color: '#ffffff', opacity: 1, position: 1, alpha: 1 }];
 
-        if (!stops[index]) {
-            stops[index] = { color: '#000000', opacity: index === 0 ? 0 : 1, position: index === 0 ? 0 : 1, alpha: 1 };
-        }
+            const stops = [...baseStops];
+            if (!stops[index]) {
+                stops[index] = { color: '#000000', opacity: index === 0 ? 0 : 1, position: index === 0 ? 0 : 1, alpha: 1 };
+            }
 
-        const fixedPos = index === 0 ? 0 : 1;
-        // Preserve existing position if not updating it, or fallback to fixed
-        stops[index] = { ...stops[index], ...updates };
-        // Ensure position integrity for 2-stop simple gradient UI
-        if (stops.length === 2) {
-            stops[index].position = fixedPos;
-            stops[index].opacity = fixedPos; // Legacy support
-        }
+            const fixedPos = index === 0 ? 0 : 1;
+            stops[index] = { ...stops[index], ...updates };
+            if (stops.length === 2) {
+                stops[index].position = fixedPos;
+                stops[index].opacity = fixedPos;
+            }
 
-        updateShape('gradient_stops', stops, save);
+            return {
+                ...prev,
+                shapes: prev.shapes.map(x => x.id === selectedId ? { ...x, gradient_stops: stops } : x)
+            };
+        }, save);
     };
 
     const swapGradientColors = () => {
-        if (!selectedShape || !selectedShape.gradient_stops || selectedShape.gradient_stops.length < 2) return;
-        const newStops = [
-            { ...selectedShape.gradient_stops[1], position: 0, opacity: 0 },
-            { ...selectedShape.gradient_stops[0], position: 1, opacity: 1 }
-        ];
-        updateShape('gradient_stops', newStops, true);
+        setConfig(prev => {
+            const s = prev.shapes?.find(x => x.id === selectedId);
+            if (!s || !s.gradient_stops || s.gradient_stops.length < 2) return prev;
+            const newStops = [
+                { ...s.gradient_stops[1], position: 0, opacity: 0 },
+                { ...s.gradient_stops[0], position: 1, opacity: 1 }
+            ];
+            return {
+                ...prev,
+                shapes: prev.shapes.map(x => x.id === selectedId ? { ...x, gradient_stops: newStops } : x)
+            };
+        }, true);
     };
 
     // Shadow Color Helpers

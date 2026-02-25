@@ -98,6 +98,7 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     const [isDragging, setIsDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
 
+    const [isAdded, setIsAdded] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const navRef = useRef<HTMLDivElement>(null);
 
@@ -445,8 +446,8 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
                                 {activeScene.result && (
                                     <div className="absolute top-8 right-8 flex flex-col gap-3 z-50 animate-in slide-in-from-top-4 duration-500">
                                         <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl p-3 rounded-2xl border border-white/10 shadow-2xl">
-                                            <button onClick={() => handleApplyToCanvas(activeScene.result!)} className="px-6 py-2.5 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2 active:scale-95 shadow-xl">
-                                                <Plus size={14} strokeWidth={4} /> Inject Board
+                                            <button onClick={() => { onApply(activeScene.result!); setIsAdded(true); setTimeout(() => setIsAdded(false), 2000); }} className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl flex items-center gap-2 ${isAdded ? 'bg-green-500 text-white' : 'bg-white text-black hover:bg-slate-100 active:scale-95'}`}>
+                                                {isAdded ? <CheckCircle2 size={14} /> : <Plus size={14} strokeWidth={4} />} {isAdded ? 'DEPLOYED' : 'Inject Board'}
                                             </button>
                                             <div className="h-6 w-px bg-white/10 mx-1" />
                                             <button onClick={() => onStash(activeScene.result!)} className="p-2.5 bg-white/5 hover:bg-indigo-600 text-white rounded-lg border border-white/10 transition-all active:scale-95" title="Stash Scene">

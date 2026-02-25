@@ -96,32 +96,25 @@ export const TypographyEngine: React.FC<TypographyEngineProps> = ({ config, setC
     }, []);
 
     const updateProperty = (key: string, value: any, save = false) => {
-        setConfig(prev => {
-            const next = JSON.parse(JSON.stringify(prev));
-            if (selectedTextLayer) {
-                const idx = next.additional_texts.findIndex((t: TextLayer) => t.id === selectedId);
-                if (idx !== -1) {
-                    next.additional_texts[idx][key] = value;
-                }
-            }
-            return next;
-        }, save);
+        if (!selectedId) return;
+        setConfig(prev => ({
+            ...prev,
+            additional_texts: prev.additional_texts.map(l => l.id === selectedId ? { ...l, [key]: value } : l)
+        }), save);
     };
 
     const handleIconSelect = (iconName: string) => {
-        setConfig(prev => {
-            const next = JSON.parse(JSON.stringify(prev));
-            if (selectedTextLayer) {
-                const idx = next.additional_texts.findIndex((t: TextLayer) => t.id === selectedId);
-                if (idx !== -1) {
-                    next.additional_texts[idx].text = iconName;
-                    next.additional_texts[idx].font = "Material Symbols Outlined";
-                    next.additional_texts[idx].resize_mode = 'auto-width';
-                    next.additional_texts[idx].letter_spacing = 0;
-                }
-            }
-            return next;
-        }, true);
+        if (!selectedId) return;
+        setConfig(prev => ({
+            ...prev,
+            additional_texts: prev.additional_texts.map(l => l.id === selectedId ? {
+                ...l,
+                text: iconName,
+                font: "Material Symbols Outlined",
+                resize_mode: 'auto-width',
+                letter_spacing: 0
+            } : l)
+        }), true);
     };
 
     const getValue = (key: string) => {

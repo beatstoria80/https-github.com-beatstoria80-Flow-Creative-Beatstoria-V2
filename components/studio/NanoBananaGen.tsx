@@ -77,6 +77,7 @@ export const NanoBananaGen: React.FC<NanoBananaGenProps> = ({
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isNavOpen, setIsNavOpen] = useState(false);
+    const [isAdded, setIsAdded] = useState(false);
     const anchorInputRef = useRef<HTMLInputElement>(null);
 
     const protocols = [
@@ -253,7 +254,9 @@ export const NanoBananaGen: React.FC<NanoBananaGenProps> = ({
                         <div className="relative group max-w-lg w-full aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-500">
                             <img src={selectedImage} className="w-full h-full object-contain bg-black" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-4 backdrop-blur-[1px]">
-                                <button onClick={() => onApply(selectedImage)} className="px-10 py-4 bg-white text-black rounded-2xl font-black text-[12px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl">Deploy to Canvas</button>
+                                <button onClick={() => { onApply(selectedImage); setIsAdded(true); setTimeout(() => setIsAdded(false), 2000); }} className={`px-10 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest transition-all shadow-2xl ${isAdded ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-white text-black hover:scale-105 active:scale-95'}`}>
+                                    {isAdded ? 'DEPLOYED TO CANVAS' : 'Deploy to Canvas'}
+                                </button>
                                 <div className="flex gap-2">
                                     <button onClick={() => onStash(selectedImage)} className="p-3 bg-white/10 hover:bg-purple-600 text-white rounded-xl border border-white/10 transition-all"><Archive size={18} /></button>
                                     <button onClick={() => downloadBlob(selectedImage, `render_pro_${Date.now()}.png`)} className="p-3 bg-white/10 hover:bg-white text-slate-200 hover:text-black rounded-xl border border-white/10 transition-all"><Download size={18} /></button>

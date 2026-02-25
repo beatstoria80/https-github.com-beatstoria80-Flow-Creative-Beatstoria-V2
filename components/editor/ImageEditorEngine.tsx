@@ -61,29 +61,40 @@ export const ImageEditorEngine: React.FC<ImageEditorEngineProps> = ({ config, se
         : { ...DEFAULT_EFFECTS, ...(selectedLayer?.effects || {}) };
 
     const updateLayerProp = (key: string, value: any, save = false) => {
-        if (isBackground) {
-            setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, [`background_layer_${key}`]: value } }), save);
-        } else if (selectedId) {
-            setConfig(prev => ({
-                ...prev,
-                image_layers: prev.image_layers.map(l => l.id === selectedId ? { ...l, [key]: value } : l)
-            }), save);
-        }
+        setConfig(prev => {
+            if (isBackground) {
+                return { ...prev, canvas: { ...prev.canvas, [`background_layer_${key}`]: value } };
+            } else if (selectedId) {
+                return {
+                    ...prev,
+                    image_layers: prev.image_layers.map(l => l.id === selectedId ? { ...l, [key]: value } : l)
+                };
+            }
+            return prev;
+        }, save);
     };
 
     const updateEffect = (key: keyof LayerEffects, value: any, save = false) => {
-        if (isBackground) {
-            const current = config.canvas.background_effects || DEFAULT_EFFECTS;
-            const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value };
-            setConfig(prev => ({ ...prev, canvas: { ...prev.canvas, background_effects: newEffects } }), save);
-        } else if (selectedId && selectedLayer) {
-            const current = selectedLayer.effects || DEFAULT_EFFECTS;
-            const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value } as LayerEffects;
-            setConfig(prev => ({
-                ...prev,
-                image_layers: prev.image_layers.map(l => l.id === selectedId ? { ...l, effects: newEffects, effects_enabled: true } : l)
-            }), save);
-        }
+        setConfig(prev => {
+            if (isBackground) {
+                const current = prev.canvas.background_effects || DEFAULT_EFFECTS;
+                const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value };
+                return { ...prev, canvas: { ...prev.canvas, background_effects: newEffects } };
+            } else if (selectedId) {
+                return {
+                    ...prev,
+                    image_layers: prev.image_layers.map(l => {
+                        if (l.id === selectedId) {
+                            const current = l.effects || DEFAULT_EFFECTS;
+                            const newEffects = { ...DEFAULT_EFFECTS, ...current, [key]: value } as LayerEffects;
+                            return { ...l, effects: newEffects, effects_enabled: true };
+                        }
+                        return l;
+                    })
+                };
+            }
+            return prev;
+        }, save);
     };
 
     const resetEffects = () => {

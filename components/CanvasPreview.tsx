@@ -441,7 +441,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         const pos = orientation === 'horizontal' ? (e.clientY - rect.top) / scale : (e.clientX - rect.left) / scale;
         const newId = `guide-${Date.now()}`;
         const newGuide: Guide = { id: newId, orientation, position: pos };
-        onUpdate({ ...config, canvas: { ...canvas, guides: [...(canvas.guides || []), newGuide] } }, false);
+        onUpdate(prev => ({ ...prev, canvas: { ...prev.canvas, guides: [...(prev.canvas.guides || []), newGuide] } }), false);
         setDraggingGuideId(newId);
     };
 
