@@ -548,7 +548,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
                                 className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer ${isSelected
                                     ? 'bg-[#1a1c23] border-[#2d323e] text-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] z-10 scale-[1.01]'
                                     : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-slate-50'
-                                    } ${group ? 'ml-3 border-l-2 border-l-purple-300' : ''}`}
+                                    } ${data.group ? 'ml-3 border-l-2 border-l-purple-300' : ''}`}
                             >
                                 <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'
