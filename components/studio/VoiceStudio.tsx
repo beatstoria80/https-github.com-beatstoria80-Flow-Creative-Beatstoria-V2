@@ -1572,6 +1572,15 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                                 <video ref={mediaRef as any} src={activeMedia.url} className="w-full h-full object-cover opacity-60" crossOrigin="anonymous" onTimeUpdate={onVideoTimeUpdate} onLoadedMetadata={onVideoMetadata} key={activeMediaId} />
                                                 <Film size={12} className="absolute text-white/80" />
                                             </>
+                                        ) : activeMedia.type === 'audio' ? (
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-500/10">
+                                                <audio ref={mediaRef as any} src={activeMedia.url} onTimeUpdate={onVideoTimeUpdate} onLoadedMetadata={onVideoMetadata} key={activeMediaId} />
+                                                <div className="relative">
+                                                    <Music size={14} className="text-indigo-400 animate-pulse" />
+                                                    <div className="absolute -inset-2 bg-indigo-400/20 rounded-full animate-ping pointer-events-none" />
+                                                </div>
+                                                <span className="text-[6px] font-black text-indigo-400 mt-1 uppercase truncate max-w-full px-2">{activeMedia.name}</span>
+                                            </div>
                                         ) : activeMedia.type === 'image' ? (
                                             <img src={activeMedia.url} className="w-full h-full object-cover" />
                                         ) : (
