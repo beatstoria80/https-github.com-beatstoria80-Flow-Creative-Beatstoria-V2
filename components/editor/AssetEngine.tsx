@@ -81,7 +81,7 @@ export const AssetEngine: React.FC<AssetEngineProps> = ({
       const naturalW = img.naturalWidth || 800;
       const naturalH = img.naturalHeight || 800;
       const ratio = naturalW / naturalH;
-      const newId = `image-${Date.now()}`;
+      const newId = `image-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       // CRITICAL FIX: Compute positioning INSIDE setConfig updater so we always
       // use the latest canvas dimensions, not a potentially stale closure value.

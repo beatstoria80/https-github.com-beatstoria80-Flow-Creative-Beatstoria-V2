@@ -439,7 +439,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
         if (!container) return;
         const rect = container.getBoundingClientRect();
         const pos = orientation === 'horizontal' ? (e.clientY - rect.top) / scale : (e.clientX - rect.left) / scale;
-        const newId = `guide-${Date.now()}`;
+        const newId = `guide-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
         const newGuide: Guide = { id: newId, orientation, position: pos };
         onUpdate(prev => ({ ...prev, canvas: { ...prev.canvas, guides: [...(prev.canvas.guides || []), newGuide] } }), false);
         setDraggingGuideId(newId);
@@ -523,12 +523,21 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
 
     const handleLayerMouseDown = (id: string, e: React.MouseEvent) => {
         if (handToolActive) return;
-        e.stopPropagation(); onFocusCanvas?.();
+        e.stopPropagation();
+        onFocusCanvas?.();
         if (readOnly) return;
+
         const parentGroup = groups?.find(g => g.layerIds.includes(id));
-        if (parentGroup) { onSelect(parentGroup.id, e.shiftKey || e.metaKey); return; }
+        const targetId = parentGroup ? parentGroup.id : id;
         const isMulti = e.shiftKey || e.metaKey;
-        if (!selectedIds.includes(id) || isMulti) { onSelect(id, isMulti); }
+
+        if (isMulti) {
+            onSelect(targetId, true);
+        } else {
+            // If clicking a layer that's part of a multi-selection, but without shift,
+            // we want to select ONLY that layer/group.
+            onSelect(targetId, false);
+        }
     };
 
     const updateLayer = (id: string, updates: any, save = false) => {

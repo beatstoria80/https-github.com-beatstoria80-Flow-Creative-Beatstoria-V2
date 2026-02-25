@@ -123,7 +123,7 @@ export const TypographyEngine: React.FC<TypographyEngineProps> = ({ config, setC
     };
 
     const handleAddNew = () => {
-        const newId = `text-${Date.now()}`;
+        const newId = `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         // CRITICAL FIX: compute position inside setConfig updater with fresh prev.canvas
         setConfig(prev => {
             const canvasW = prev.canvas.width;

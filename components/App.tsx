@@ -63,36 +63,48 @@ const repairConfig = (config: AppConfig): AppConfig => {
         ...l,
         position_x: Number(l.position_x) || 0,
         position_y: Number(l.position_y) || 0,
-        width: Math.max(1, Number(l.width) || 100),
-        height: Math.max(1, Number(l.height) || 100),
+        width: Math.max(5, Number(l.width) || 100),
+        height: Math.max(5, Number(l.height) || 100),
         rotation: Number(l.rotation) || 0,
-        opacity: l.opacity === undefined ? 1 : Number(l.opacity)
+        opacity: l.opacity === undefined ? 1 : Number(l.opacity),
+        locked: !!l.locked,
+        hidden: !!l.hidden
     }));
 
     const additional_texts = (Array.isArray(config.additional_texts) ? config.additional_texts : []).map(l => ({
         ...l,
         position_x: Number(l.position_x) || 0,
         position_y: Number(l.position_y) || 0,
-        width: Math.max(1, Number(l.width) || 200),
-        height: Math.max(1, Number(l.height) || 50),
+        width: Math.max(5, Number(l.width) || 200),
+        height: Math.max(5, Number(l.height) || 50),
         rotation: Number(l.rotation) || 0,
-        font_size: Number(l.font_size) || 16,
-        opacity: l.opacity === undefined ? 1 : Number(l.opacity)
+        font_size: Math.max(1, Number(l.font_size) || 16),
+        opacity: l.opacity === undefined ? 1 : Number(l.opacity),
+        locked: !!l.locked,
+        hidden: !!l.hidden
     }));
 
     const shapes = (Array.isArray(config.shapes) ? config.shapes : []).map(l => ({
         ...l,
         position_x: Number(l.position_x) || 0,
         position_y: Number(l.position_y) || 0,
-        width: Math.max(1, Number(l.width) || 100),
-        height: Math.max(1, Number(l.height) || 100),
+        width: Math.max(5, Number(l.width) || 100),
+        height: Math.max(5, Number(l.height) || 100),
         rotation: Number(l.rotation) || 0,
         opacity: l.opacity === undefined ? 1 : Number(l.opacity),
         stroke_width: Number(l.stroke_width) || 0,
-        border_radius: Number(l.border_radius) || 0
+        border_radius: Number(l.border_radius) || 0,
+        locked: !!l.locked,
+        hidden: !!l.hidden
     }));
 
-    const groups = Array.isArray(config.groups) ? config.groups : [];
+    const groups = (Array.isArray(config.groups) ? config.groups : []).map(g => ({
+        ...g,
+        layerIds: Array.isArray(g.layerIds) ? g.layerIds : [],
+        collapsed: !!g.collapsed,
+        locked: !!g.locked,
+        hidden: !!g.hidden
+    }));
 
     // Rebuild layerOrder if missing or corrupted
     let layerOrder = Array.isArray(config.layerOrder) ? [...config.layerOrder] : [];
@@ -115,18 +127,20 @@ const repairConfig = (config: AppConfig): AppConfig => {
         if (!layerOrder.includes(id)) layerOrder.push(id);
     });
 
-    // Remove nonexistent layers from layerOrder (except global-fx)
-    layerOrder = layerOrder.filter(id => id === 'global-fx' || allLayerIds.has(id));
+    // Remove nonexistent layers from layerOrder and ENSURE UNIQUENESS
+    layerOrder = Array.from(new Set(layerOrder)).filter(id => id === 'global-fx' || allLayerIds.has(id));
 
     return {
         ...d,
         ...config,
-        id: config.id || `page-${Date.now()}`,
+        id: config.id || `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         canvas: {
             ...d.canvas,
             ...(config.canvas || {}),
             width: Number(config.canvas?.width) || d.canvas.width,
-            height: Number(config.canvas?.height) || d.canvas.height
+            height: Number(config.canvas?.height) || d.canvas.height,
+            guides: Array.isArray(config.canvas?.guides) ? config.canvas.guides : (d.canvas.guides || []),
+            background_layer_opacity: config.canvas?.background_layer_opacity === undefined ? 1 : Number(config.canvas.background_layer_opacity)
         },
         typography: { ...d.typography, ...(config.typography || {}) },
         image_layers,
@@ -306,15 +320,45 @@ export const App: React.FC = () => {
 
     const handleUndo = () => { if (appState.index > 0) { setAppState(prev => ({ ...prev, index: prev.index - 1 })); setTimeout(() => setSelectedIds([]), 0); } };
     const handleRedo = () => { if (appState.index < appState.history.length - 1) { setAppState(prev => ({ ...prev, index: prev.index + 1 })); setTimeout(() => setSelectedIds([]), 0); } };
-    const handleStashResult = (src: string) => { if (!src) return; const newAsset: StashAsset = { id: `stash-${Date.now()}`, src: src, name: `GEN_${Date.now()}`, backup: true, timestamp: Date.now() }; setConfig(prev => ({ ...prev, stash: [newAsset, ...(prev.stash || [])] }), true); showToast("ASSET STASHED TO LIBRARY"); };
+    const handleStashResult = (src: string) => {
+        if (!src) return;
+        const newAsset: StashAsset = {
+            id: `stash-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            src: src,
+            name: `GEN_${Date.now()}`,
+            backup: true,
+            timestamp: Date.now()
+        };
+        setConfig(prev => ({ ...prev, stash: [newAsset, ...(prev.stash || [])] }), true);
+        showToast("ASSET STASHED TO LIBRARY");
+    };
     const refreshLibrary = async () => { try { const libs = await getAllProjectsFromDB(); setProjectLibrary(libs); } catch (e) { } };
     const generateUniqueName = (baseName: string) => { const upperName = (baseName || "UNTITLED").toUpperCase().trim(); let finalName = upperName; let counter = 1; while (projectLibrary.some(p => p.name === finalName && p.id !== currentProjectId)) { counter++; finalName = `${upperName} V${counter}`; } return finalName; };
-    const handleImportProject = (data: any) => { const pagesToImport = data.pages || (data.canvas ? [data] : null); if (!pagesToImport) return; const newProjectId = `import-${Date.now()}`; const uniqueName = generateUniqueName(data.projectName || "Imported Project"); const importedPages = pagesToImport.map((p: any) => ({ ...repairConfig(p), projectName: uniqueName, id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` })); setCurrentProjectId(newProjectId); setAppState({ history: [{ pages: importedPages, activePageIndex: 0 }], index: 0 }); saveProjectToDB({ id: newProjectId, name: uniqueName, lastSaved: Date.now(), data: { pages: importedPages, activePageIndex: 0 } }).then(refreshLibrary); setShowLanding(false); setIsBackendMenuOpen(false); localStorage.setItem('last_active_project_id', newProjectId); };
+    const handleImportProject = (data: any) => {
+        const pagesToImport = data.pages || (data.canvas ? [data] : null);
+        if (!pagesToImport) return;
+        const newProjectId = `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const uniqueName = generateUniqueName(data.projectName || "Imported Project");
+        const importedPages = pagesToImport.map((p: any) => ({ ...repairConfig(p), projectName: uniqueName, id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }));
+        setCurrentProjectId(newProjectId);
+        setAppState({ history: [{ pages: importedPages, activePageIndex: 0 }], index: 0 });
+        saveProjectToDB({ id: newProjectId, name: uniqueName, lastSaved: Date.now(), data: { pages: importedPages, activePageIndex: 0 } }).then(refreshLibrary);
+        setShowLanding(false); setIsBackendMenuOpen(false); localStorage.setItem('last_active_project_id', newProjectId);
+    };
     const handlePurgeAllProjects = async () => { isPurgingRef.current = true; try { await clearAllProjectsFromDB(); localStorage.removeItem('last_active_project_id'); window.location.reload(); } catch (error) { isPurgingRef.current = false; } };
-    const handleDeleteProject = async (id: string) => { if (id === currentProjectId) { isPurgingRef.current = true; const blankId = `proj-blank-${Date.now()}`; setCurrentProjectId(blankId); setAppState({ history: [{ pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }], index: 0 }); localStorage.removeItem('last_active_project_id'); } try { await deleteProjectFromDB(id); await refreshLibrary(); } catch (error) { } finally { if (id === currentProjectId) setTimeout(() => { isPurgingRef.current = false; }, 500); } };
+    const handleDeleteProject = async (id: string) => {
+        if (id === currentProjectId) {
+            isPurgingRef.current = true;
+            const blankId = `proj-blank-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            setCurrentProjectId(blankId);
+            setAppState({ history: [{ pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }], index: 0 });
+            localStorage.removeItem('last_active_project_id');
+        }
+        try { await deleteProjectFromDB(id); await refreshLibrary(); } catch (error) { } finally { if (id === currentProjectId) setTimeout(() => { isPurgingRef.current = false; }, 500); }
+    };
     const handleGroupLayers = () => {
         if (selectedIds.length < 2) return;
-        const newGroupId = `group-${Date.now()}`;
+        const newGroupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         setConfig(prev => {
             const next = deepCopy(prev);
             // 1. Flatten selection: if a group is selected, we take its children
@@ -378,7 +422,7 @@ export const App: React.FC = () => {
                 const nw = img.naturalWidth || 800;
                 const nh = img.naturalHeight || 800;
                 const ratio = nw / nh;
-                const newId = `image-${Date.now()}`;
+                const newId = `image-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                 setConfig(prev => {
                     const canvasW = prev.canvas?.width || 1080;
@@ -444,8 +488,9 @@ export const App: React.FC = () => {
 
     const handleCreateProject = (data?: any) => {
         if (!data) { setShowNewProjectFlow(true); return; }
-        const newId = `proj-${Date.now()}`; const uniqueName = generateUniqueName(data.name);
-        const newConfig = repairConfig({ ...deepCopy(DEFAULT_CONFIG), id: newId, projectName: uniqueName, canvas: { ...DEFAULT_CONFIG.canvas, width: data.width, height: data.height } });
+        const newId = `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const uniqueName = generateUniqueName(data.name);
+        const newConfig = repairConfig({ ...deepCopy(DEFAULT_CONFIG), id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, projectName: uniqueName, canvas: { ...DEFAULT_CONFIG.canvas, width: data.width, height: data.height } });
         setCurrentProjectId(newId);
         setAppState({ history: [{ pages: [newConfig], activePageIndex: 0 }], index: 0 });
         saveProjectToDB({ id: newId, name: uniqueName, lastSaved: Date.now(), data: { pages: [newConfig], activePageIndex: 0 } }).then(refreshLibrary);
@@ -465,11 +510,32 @@ export const App: React.FC = () => {
         }
     }, []);
     const handleDuplicatePage = (index: number) => {
-        setAppState(prev => { const current = prev.history[prev.index]; const pageToClone = current.pages[index]; const newPage = deepCopy(pageToClone); newPage.id = `page-${Date.now()}`; newPage.name = `${pageToClone.name} COPY`; const newPages = [...current.pages]; newPages.splice(index + 1, 0, newPage); const newState = { ...current, pages: newPages, activePageIndex: index + 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
+        setAppState(prev => {
+            const current = prev.history[prev.index];
+            const pageToClone = current.pages[index];
+            const newPage = deepCopy(pageToClone);
+            newPage.id = `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            newPage.name = `${pageToClone.name} COPY`;
+            const newPages = [...current.pages];
+            newPages.splice(index + 1, 0, newPage);
+            const newState = { ...current, pages: newPages, activePageIndex: index + 1 };
+            const newHist = [...prev.history.slice(0, prev.index + 1), newState];
+            return { history: newHist, index: newHist.length - 1 };
+        });
         setTimeout(() => setSelectedIds([]), 0);
     };
     const handleAddNewPage = () => {
-        setAppState(prev => { const current = prev.history[prev.index]; const newPage = repairConfig(deepCopy(DEFAULT_CONFIG)); newPage.id = `page-${Date.now()}`; newPage.name = `ARTBOARD ${current.pages.length + 1}`; newPage.projectName = current.pages[0].projectName; const newPages = [...current.pages, newPage]; const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
+        setAppState(prev => {
+            const current = prev.history[prev.index];
+            const newPage = repairConfig(deepCopy(DEFAULT_CONFIG));
+            newPage.id = `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            newPage.name = `ARTBOARD ${current.pages.length + 1}`;
+            newPage.projectName = current.pages[0].projectName;
+            const newPages = [...current.pages, newPage];
+            const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 };
+            const newHist = [...prev.history.slice(0, prev.index + 1), newState];
+            return { history: newHist, index: newHist.length - 1 };
+        });
         setTimeout(() => setSelectedIds([]), 0);
     };
     const handleDuplicateAllPages = () => {
@@ -477,9 +543,9 @@ export const App: React.FC = () => {
             const current = prev.history[prev.index];
             const clonedPages = current.pages.map(p => {
                 const clone = deepCopy(p);
-                clone.id = `page-${Date.now()}-${Math.random()}`;
+                clone.id = `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 clone.name = `${p.name} CLONE`;
-                return clone;
+                return repairConfig(clone);
             });
             const newPages = [...current.pages, ...clonedPages];
             const newState = { ...current, pages: newPages, activePageIndex: newPages.length - 1 };
@@ -562,7 +628,7 @@ export const App: React.FC = () => {
 
             clipboard.layers.forEach(l => {
                 const prefix = l.id.split('-')[0] || 'node';
-                const newId = `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const newId = `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 idMap.set(l.id, newId);
 
                 const newLayer = {
@@ -587,7 +653,7 @@ export const App: React.FC = () => {
             });
 
             clipboard.groups.forEach(g => {
-                const newGId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const newGId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 next.groups.push({
                     ...g,
                     id: newGId,
@@ -661,9 +727,10 @@ export const App: React.FC = () => {
 
             // Duplicate Layers
             const duplicate = (layer: any) => {
-                const newId = `${layer.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const prefix = layer.id.split('-')[0] || 'node';
+                const newId = `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 idMap.set(layer.id, newId);
-                return { ...layer, id: newId, position_x: layer.position_x + 20, position_y: layer.position_y + 20 };
+                return { ...layer, id: newId, position_x: Number(layer.position_x) + 20, position_y: Number(layer.position_y) + 20 };
             };
 
             const newImages = next.image_layers.filter(l => explicitLayerIds.includes(l.id)).map(duplicate);
@@ -684,7 +751,7 @@ export const App: React.FC = () => {
             groupIds.forEach(gid => {
                 const g = next.groups.find(grp => grp.id === gid);
                 if (g) {
-                    const newGId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                    const newGId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     next.groups.push({
                         ...g,
                         id: newGId,
@@ -779,6 +846,7 @@ export const App: React.FC = () => {
     }, [selectedIds, setConfig]);
 
 
+    // INITIAL RESTORE: Run only once on mount
     useEffect(() => {
         document.body.classList.remove('is-navigating');
         isPurgingRef.current = false;
@@ -793,10 +861,18 @@ export const App: React.FC = () => {
                         setShowLanding(false);
                     }
                 }
-            } catch (e) { } finally { setIsInitializing(false); refreshLibrary(); }
+            } catch (e) {
+                console.error("Neural Restore Failed:", e);
+            } finally {
+                setIsInitializing(false);
+                refreshLibrary();
+            }
         };
         restore();
+    }, []); // Empty dependency array ensures this ONLY runs on mount
 
+    // EDITOR LISTENERS: Run when selection or history changes
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
 
@@ -823,13 +899,11 @@ export const App: React.FC = () => {
 
             // Copy/Paste
             if (isMod && (e.key === 'c' || e.key === 'C')) {
-                console.log('Shortcut: Copy triggered');
                 e.preventDefault();
                 handleCopy();
                 return;
             }
             if (isMod && (e.key === 'v' || e.key === 'V')) {
-                console.log('Shortcut: Paste triggered');
                 e.preventDefault();
                 handlePaste();
                 return;
@@ -912,7 +986,8 @@ export const App: React.FC = () => {
             window.removeEventListener('keyup', handleKeyUp);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [selectedIds, appState.index, appState.history, handleCopy, handlePaste, deleteSelectedLayers, duplicateSelectedLayers, selectAllLayers, handleGroupLayers, handleUndoGroup, moveLayerZOrder, moveSelectedLayers]);
+    }, [selectedIds, appState.index, handleCopy, handlePaste, deleteSelectedLayers, duplicateSelectedLayers, selectAllLayers, handleGroupLayers, handleUndoGroup, moveLayerZOrder, moveSelectedLayers]);
+
 
     useEffect(() => {
         const move = (e: MouseEvent) => { if (isPanning) setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y }); };
@@ -940,9 +1015,10 @@ export const App: React.FC = () => {
     const handleDuplicateSelectedLayers = () => { /* Logic already handled via copy/paste but can be expanded */ };
 
 
-    const handleCanvasUpdate = useCallback((pageId: string, update: any, save: boolean) => {
+    const handleCanvasUpdate = useCallback((pageId: string, update: any, save: boolean = true) => {
         setAppState(prev => {
             const current = prev.history[prev.index];
+            if (!current) return prev; // Safety
             const targetIdx = current.pages.findIndex(p => p.id === pageId);
             if (targetIdx === -1) return prev;
 
@@ -1163,9 +1239,9 @@ export const App: React.FC = () => {
                                                     domId={`canvas-export-${pageConfig.id}`}
                                                     config={pageConfig}
                                                     scale={zoom}
-                                                    onUpdate={(update, save) => handleCanvasUpdate(pageConfig.id, update, save)}
+                                                    onUpdate={(update, save) => handleCanvasUpdate(pageConfig.id, update, !!save)}
                                                     selectedIds={isActive ? selectedIds : []}
-                                                    onSelect={(id, multi) => handleCanvasSelectDirect(pageIndex, id, multi)}
+                                                    onSelect={(id, multi) => handleCanvasSelectDirect(pageIndex, id, !!multi)}
                                                     readOnly={false}
                                                     isActive={isActive}
                                                     handToolActive={penToolMode === 'hand' || isSpacePressed}
