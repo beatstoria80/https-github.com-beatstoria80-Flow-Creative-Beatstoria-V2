@@ -50,10 +50,15 @@ import {
     Minimize2,
     MonitorDown,
     Briefcase,
-    BarChart3
+    BarChart3,
+    Layout,
+    Mic2,
+    Scissors
 } from 'lucide-react';
 // Fix: Use 'Type' directly instead of 'Type as SchemaType' per coding guidelines
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+
+const getApiKey = () => localStorage.getItem('gemini_api_key') || (import.meta as any).env.VITE_API_KEY || "";
 
 interface VoiceStudioProps {
     isOpen: boolean;
@@ -839,8 +844,8 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         const style = VOICE_STYLES.find(s => s.id === spk!.styleId);
         const selectedVoice = spk.gender === 'male' ? (style?.maleVoice || 'Puck') : (style?.femaleVoice || 'Kore');
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
-            const response = await ai.models.generateContent({ model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const response = await ai.models.generateContent({ model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
             const base64Audio = response.candidates?.[0]?.content?.parts[0]?.inlineData?.data;
             if (base64Audio) {
                 const ctx = getSafeAudioContext(); const buffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
@@ -888,7 +893,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         setIsScripting(true); setScript([]); setResearchLabel("SINTESIS NEURAL AKTIF..."); handleStopPlayback();
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
             const combinedSource = attachedFiles.filter(f => f.status === 'ready').map(f => f.content).join('\n');
 
             const speakerListStr = speakers.map(s => `ID: ${s.id}, Name: ${s.name}`).join('; ');
@@ -1118,7 +1123,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         const styleObj = SCRIPT_STYLES.find(s => s.id === styleId);
         const styleLabel = styleObj?.label || "General";
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
             const scriptJson = JSON.stringify(script.map(l => ({ speakerId: l.speakerId, text: l.text })));
             const prompt = `TASK: ENHANCE SCRIPT PUNCTUATION AND STYLE FOR ${styleLabel}.
         STYLE TRAIT: ${styleObj?.tone}
@@ -1128,7 +1133,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         CRITICAL: Maintain the exact same number of lines. Return the exact same JSON format with "speakerId" and "text".`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview', contents: prompt, config: {
+                model: 'gemini-1.5-flash', contents: prompt, config: {
                     // @ts-ignore
                     responseMimeType: "application/json"
                 }
@@ -1159,7 +1164,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
     const handleResearchFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files) as File[];
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
             for (const file of files) {
                 const id = `file-${Date.now()}`;
                 const type = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : (file.type.startsWith('image/') ? 'image' : 'text');
@@ -1169,7 +1174,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                     let content = "";
                     if (type === 'image') {
                         const base64 = await fileToBase64(file);
-                        const visionResponse: any = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [{ inlineData: { data: base64.split(',')[1], mimeType: file.type } }, { text: "Extract text." }] } });
+                        const visionResponse: any = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: { parts: [{ inlineData: { data: base64.split(',')[1], mimeType: file.type } }, { text: "Extract text." }] } });
                         content = visionResponse.text || "";
                     } else if (type === 'pdf') { content = await extractTextFromPDF(file); } else { content = await file.text(); }
                     setAttachedFiles(prev => prev.map(f => f.id === id ? { ...f, content, status: 'ready' } : f));
