@@ -316,7 +316,7 @@ const TextLayerItem: React.FC<TextLayerItemProps> = ({ layer, isSelected, isGrou
         return { WebkitMaskImage: gradient, maskImage: gradient, WebkitMaskSize: '100% 100%', maskSize: '100% 100%', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' };
     };
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (!textRef.current || readOnly || isWarped || isInteracting) return;
         const node = textRef.current;
         const rect = node.getBoundingClientRect();
@@ -731,9 +731,6 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     onMouseDown: (e: any) => handleLayerMouseDown(id, e),
                     cancel: ".no-drag",
                     className: `selectable-layer layer-node-${id}`,
-                    // CRITICAL FIX: Disable individual drag in multi-selection to prevent conflict
-                    // with the batch-transform Rnd box. Clicks still work for selection changes.
-                    disableDragging: disableInteraction || (isMultiSelection && isSelected),
                     onDragStart: () => setInteractingId(id),
                     onResizeStart: () => setInteractingId(id),
                     onDragStop: (e: any, d: any) => { setInteractingId(null); updateLayer(id, { position_x: d.x, position_y: d.y }, true); },
