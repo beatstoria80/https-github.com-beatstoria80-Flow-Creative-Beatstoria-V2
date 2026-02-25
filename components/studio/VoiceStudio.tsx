@@ -53,7 +53,8 @@ import {
     BarChart3,
     Layout,
     Mic2,
-    Scissors
+    Scissors,
+    Sliders
 } from 'lucide-react';
 // Fix: Use 'Type' directly instead of 'Type as SchemaType' per coding guidelines
 import { GoogleGenAI, Type } from "@google/genai";
@@ -695,6 +696,20 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         scriptRef.current = script;
     }, [script, speakers, engineMode, context, activeSessionId, projectName]);
 
+    useEffect(() => {
+        if (gainNodeRef.current) {
+            gainNodeRef.current.gain.setTargetAtTime(volume, getSafeAudioContext().currentTime, 0.1);
+        }
+    }, [volume]);
+
+    useEffect(() => {
+        if (biquadFiltersRef.current.length > 0) {
+            biquadFiltersRef.current.forEach((filter, i) => {
+                if (filter) filter.gain.setTargetAtTime(eqBands[i], getSafeAudioContext().currentTime, 0.1);
+            });
+        }
+    }, [eqBands]);
+
     const getSafeAudioContext = () => {
         if (!audioContextRef.current) {
             const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -721,8 +736,9 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
             biquadFiltersRef.current = filters;
             analyserRef.current = analyser;
         }
-        if (audioContextRef.current.state === 'suspended') { audioContextRef.current.resume(); }
-        return audioContextRef.current;
+        const ctx = audioContextRef.current!;
+        if (ctx.state === 'suspended') { ctx.resume(); }
+        return ctx;
     };
 
     const handleStopPlayback = (stopFullRead = true) => {
@@ -737,6 +753,21 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         setPlayingLineIndex(null);
         playbackOffsetRef.current = 0;
     };
+
+    useEffect(() => {
+        if (activeSourceRef.current) {
+            activeSourceRef.current.playbackRate.setTargetAtTime(pacing, getSafeAudioContext().currentTime, 0.1);
+        }
+        if (mediaRef.current) {
+            mediaRef.current.playbackRate = pacing;
+        }
+    }, [pacing]);
+
+    useEffect(() => {
+        if (gainNodeRef.current) {
+            gainNodeRef.current.gain.setTargetAtTime(volume, getSafeAudioContext().currentTime, 0.1);
+        }
+    }, [volume]);
 
     const handleStartPlayback = (buffer: AudioBuffer, offset: number = 0, lineIndex: number | null = null, onEnded?: () => void) => {
         if (!buffer || !(buffer instanceof AudioBuffer)) { if (onEnded) onEnded(); return; }
@@ -1534,7 +1565,73 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                             <div className="max-w-[1600px] mx-auto w-full flex items-center gap-4 relative z-10 px-2">
                                                 <div className={`flex items-center gap-1 p-0.5 rounded-lg border shrink-0 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-slate-50 border-slate-200'}`}><button onClick={() => { if (activePlaybackType === 'script' && playingLineIndex !== null && playingLineIndex > 0) { const prevLine = script[playingLineIndex - 1]; if (prevLine && prevLine.audioBuffer) handleStartPlayback(prevLine.audioBuffer, 0, playingLineIndex - 1); } else if (activePlaybackType === 'reference') handlePlayReferenceMedia(0); }} className="p-1.5 rounded-md hover:bg-black/5 text-slate-400 active:scale-90"><SkipBack size={14} fill="currentColor" /></button><button onClick={toggleMasterPlayback} disabled={!isAnyAudioReady && !activeMedia} className={`w-8 h-8 flex items-center justify-center rounded-full shadow-lg hover:scale-105 active:scale-[0.95] transition-all ${(isAnyAudioReady || activeMedia) ? 'bg-indigo-600' : 'bg-slate-200 opacity-30'}`}>{isPlaying ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" className="ml-0.5" />}</button><button onClick={() => { if (activePlaybackType === 'script' && playingLineIndex !== null && playingLineIndex < script.length - 1) { const nextLine = script[playingLineIndex + 1]; if (nextLine && nextLine.audioBuffer) handleStartPlayback(nextLine.audioBuffer, 0, playingLineIndex + 1); } }} className="p-1.5 rounded-md hover:bg-black/5 text-slate-400 active:scale-90"><SkipForward size={14} fill="currentColor" /></button></div>
                                                 <div className="flex-1 flex flex-col gap-1"><div className={`relative group/seek h-1.5 w-full rounded-full overflow-hidden cursor-pointer ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} onClick={handleSeek}><div className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_15px_rgba(168,85,247,1)]" style={{ width: `${(playbackTime / (totalDuration || 1)) * 100}%` }} /></div><div className="flex items-center justify-between text-[6px] font-black text-slate-400 uppercase tracking-widest px-0.5"><div className="flex items-center gap-2"><span className="text-indigo-600 font-mono text-[8px]">{formatDurationDisplay(playbackTime)} / {formatDurationDisplay(totalDuration)}</span>{activeMedia && activePlaybackType === 'reference' && <span className="text-pink-500 truncate max-w-[200px]">• {activeMedia.name.toUpperCase()}</span>}</div><div className="flex items-center gap-1.5"><VolumeLow size={8} className="text-slate-400" /><div className={`w-16 h-0.5 rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-slate-200'}`}><div className="h-full bg-indigo-500" style={{ width: `${volume * 100}%` }} /></div><VolumeHigh size={8} className="text-slate-400" /></div></div></div>
-                                                <div className={`flex items-center gap-2 shrink-0 border-l pl-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}><button onClick={() => setShowQuickSettings(!showQuickSettings)} className={`p-2 rounded-lg transition-all ${showQuickSettings ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-black/5'}`} title="Quick Settings"><Settings size={14} /></button><button onClick={() => handleExportTextManual('txt')} className="p-1.5 text-slate-400 hover:text-indigo-600" title="Export Transcript"><FileText size={14} /></button></div>
+                                                <div className={`flex items-center gap-2 shrink-0 border-l pl-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                                                    <div className="relative">
+                                                        <button onClick={() => setShowQuickSettings(!showQuickSettings)} className={`p-2 rounded-lg transition-all ${showQuickSettings ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-black/5'}`} title="Quick Settings"><Settings size={14} /></button>
+                                                        {showQuickSettings && (
+                                                            <div className={`absolute bottom-full right-0 mb-4 w-72 border rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.4)] overflow-hidden z-[5000] animate-in slide-in-from-bottom-4 fade-in duration-500 ${isDark ? 'bg-[#0a0a0a] border-white/10' : 'bg-white border-slate-200'}`}>
+                                                                <div className={`p-5 border-b flex items-center justify-between ${isDark ? 'border-white/5 bg-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Neural Playback Engine</span>
+                                                                    <button onClick={() => setShowQuickSettings(false)} className="text-slate-500 hover:text-white p-1.5 hover:bg-black/10 rounded-xl transition-all"><X size={12} /></button>
+                                                                </div>
+                                                                <div className="p-6 space-y-8">
+                                                                    {/* PACING CONTROL */}
+                                                                    <div className="space-y-4">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2"><Activity size={12} /> Playback Pacing</span>
+                                                                            <span className="text-[9px] font-bold text-indigo-500">{pacing.toFixed(1)}x</span>
+                                                                        </div>
+                                                                        <input type="range" min="0.5" max="2.0" step="0.1" value={pacing} onChange={(e) => setPacing(parseFloat(e.target.value))} className="w-full accent-indigo-600 h-1 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                                                                        <div className="flex justify-between text-[7px] font-black text-slate-700 uppercase tracking-widest"><span>Slow</span><span>Natural</span><span>Rapid</span></div>
+                                                                    </div>
+
+                                                                    {/* VOLUME CONTROL */}
+                                                                    <div className="space-y-4">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2"><Volume2 size={12} /> Master Gain</span>
+                                                                            <span className="text-[9px] font-bold text-indigo-500">{Math.round(volume * 100)}%</span>
+                                                                        </div>
+                                                                        <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="w-full accent-indigo-600 h-1 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                                                                    </div>
+
+                                                                    {/* EQ BANDS (SIMULATED FOR NOW) */}
+                                                                    <div className="space-y-4">
+                                                                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2"><Sliders size={12} /> Neural Equalizer</span>
+                                                                        <div className="flex items-end justify-between h-20 gap-2 px-1">
+                                                                            {eqBands.map((val, i) => (
+                                                                                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                                                                                    <div className="w-full relative h-[60px] flex items-end bg-white/[0.03] rounded-md overflow-hidden">
+                                                                                        <div className="absolute inset-x-0 bottom-0 bg-indigo-500/30 transition-all duration-300" style={{ height: `${((val + 12) / 24) * 100}%` }} />
+                                                                                        <input
+                                                                                            type="range"
+                                                                                            min="-12"
+                                                                                            max="12"
+                                                                                            step="1"
+                                                                                            value={val}
+                                                                                            onChange={(e) => {
+                                                                                                const next = [...eqBands];
+                                                                                                next[i] = parseInt(e.target.value);
+                                                                                                setEqBands(next);
+                                                                                            }}
+                                                                                            className="absolute inset-0 w-20 h-full opacity-0 cursor-ns-resize -rotate-90 origin-center"
+                                                                                            style={{ width: '60px', left: '-20px' }}
+                                                                                        />
+                                                                                    </div>
+                                                                                    <span className="text-[6px] font-bold text-slate-600">{['60', '230', '910', '4K', '14K'][i]}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className={`p-4 border-t flex items-center justify-between ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                                                    <button onClick={() => { setPacing(1.0); setVolume(0.8); setEqBands([0, 0, 0, 0, 0]); }} className="text-[8px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-500 transition-colors">Reset Neural Core</button>
+                                                                    <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /><span className="text-[7px] font-black uppercase tracking-widest text-slate-500">Engine Stable</span></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <button onClick={() => handleExportTextManual('txt')} className="p-1.5 text-slate-400 hover:text-indigo-600" title="Export Transcript"><FileText size={14} /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
