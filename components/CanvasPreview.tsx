@@ -7,7 +7,7 @@ import { NOISE_TEXTURE } from '../constants';
 interface CanvasPreviewProps {
     config: AppConfig;
     scale: number;
-    onUpdate: (config: AppConfig, save?: boolean) => void;
+    onUpdate: (config: AppConfig | ((prev: AppConfig) => AppConfig), save?: boolean) => void;
     selectedIds: string[];
     onSelect: (id: string | string[] | null, multi?: boolean) => void;
     readOnly?: boolean;
@@ -404,30 +404,34 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
             const container = document.getElementById(domId || '');
             if (!container) return;
             const rect = container.getBoundingClientRect();
-            const guideIndex = canvas.guides.findIndex(g => g.id === draggingGuideId);
-            if (guideIndex === -1) return;
-            const guide = canvas.guides[guideIndex];
-            let pos = guide.orientation === 'horizontal' ? (e.clientY - rect.top) / scale : (e.clientX - rect.left) / scale;
-            const newGuides = [...canvas.guides];
-            newGuides[guideIndex] = { ...guide, position: pos };
-            onUpdate({ ...config, canvas: { ...canvas, guides: newGuides } }, false);
+
+            onUpdate(prev => {
+                const guideIndex = prev.canvas.guides.findIndex(g => g.id === draggingGuideId);
+                if (guideIndex === -1) return prev;
+                const guide = prev.canvas.guides[guideIndex];
+                let pos = guide.orientation === 'horizontal' ? (e.clientY - rect.top) / scale : (e.clientX - rect.left) / scale;
+                const newGuides = [...prev.canvas.guides];
+                newGuides[guideIndex] = { ...guide, position: pos };
+                return { ...prev, canvas: { ...prev.canvas, guides: newGuides } };
+            }, false);
         };
         const handleUp = () => {
-            const guide = canvas.guides.find(g => g.id === draggingGuideId);
-            if (guide) {
-                if (guide.position < 0 || (guide.orientation === 'horizontal' ? guide.position > canvas.height : guide.position > canvas.width)) {
-                    const newGuides = canvas.guides.filter(g => g.id !== draggingGuideId);
-                    onUpdate({ ...config, canvas: { ...canvas, guides: newGuides } }, true);
-                } else {
-                    onUpdate(config, true);
+            onUpdate(prev => {
+                const guide = prev.canvas.guides.find(g => g.id === draggingGuideId);
+                if (guide) {
+                    if (guide.position < 0 || (guide.orientation === 'horizontal' ? guide.position > prev.canvas.height : guide.position > prev.canvas.width)) {
+                        const newGuides = prev.canvas.guides.filter(g => g.id !== draggingGuideId);
+                        return { ...prev, canvas: { ...prev.canvas, guides: newGuides } };
+                    }
                 }
-            }
+                return prev;
+            }, true);
             setDraggingGuideId(null);
         };
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
         return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
-    }, [draggingGuideId, config, scale, onUpdate, domId, canvas]);
+    }, [draggingGuideId, scale, onUpdate, domId]);
 
     const handleCreateGuide = (e: React.MouseEvent, orientation: 'horizontal' | 'vertical') => {
         e.preventDefault(); e.stopPropagation();
@@ -529,67 +533,94 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
 
     const updateLayer = (id: string, updates: any, save = false) => {
         if (readOnly) return;
-        const newImages = image_layers.map(l => l.id === id ? { ...l, ...updates } : l);
-        const newTexts = additional_texts.map(l => l.id === id ? { ...l, ...updates } : l);
-        const newShapes = (shapes || []).map(l => l.id === id ? { ...l, ...updates } : l);
-        onUpdate({ ...config, image_layers: newImages, additional_texts: newTexts, shapes: newShapes }, save);
+        onUpdate(prev => {
+            const newImages = (prev.image_layers || []).map(l => l.id === id ? { ...l, ...updates } : l);
+            const newTexts = (prev.additional_texts || []).map(l => l.id === id ? { ...l, ...updates } : l);
+            const newShapes = (prev.shapes || []).map(l => l.id === id ? { ...l, ...updates } : l);
+            return {
+                ...prev,
+                image_layers: newImages,
+                additional_texts: newTexts,
+                shapes: newShapes
+            };
+        }, save);
     };
 
     const handleBatchTransform = (data: { x?: number, y?: number, w?: number, h?: number }, isDrag: boolean) => {
         if (selectedIds.length <= 1) return;
-        const allLayers = [...image_layers, ...additional_texts, ...(shapes || [])];
-        const selectionRect = getBoundingBox(selectedIds, allLayers);
-        if (!selectionRect) return;
-        let newConfig = { ...config };
-        if (isDrag && data.x !== undefined && data.y !== undefined) {
-            const deltaX = data.x - selectionRect.x;
-            const deltaY = data.y - selectionRect.y;
-            const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
-            newConfig.image_layers = newConfig.image_layers.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
-            newConfig.additional_texts = newConfig.additional_texts.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
-            newConfig.shapes = (newConfig.shapes || []).map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
-        } else if (!isDrag && data.w !== undefined && data.h !== undefined && data.x !== undefined && data.y !== undefined) {
-            const scaleX = data.w / selectionRect.width;
-            const scaleY = data.h / selectionRect.height;
-            const updateSizePos = (l: any) => {
-                const relX = l.position_x - selectionRect.x;
-                const relY = l.position_y - selectionRect.y;
-                return { ...l, width: l.width * scaleX, height: l.height * scaleY, position_x: data.x! + (relX * scaleX), position_y: data.y! + (relY * scaleY), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
-            };
-            newConfig.image_layers = newConfig.image_layers.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
-            newConfig.additional_texts = newConfig.additional_texts.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
-            newConfig.shapes = (newConfig.shapes || []).map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
-        }
-        onUpdate(newConfig, true);
+        onUpdate(prev => {
+            const allLayers = [...(prev.image_layers || []), ...(prev.additional_texts || []), ...(prev.shapes || [])];
+            const selectionRect = getBoundingBox(selectedIds, allLayers);
+            if (!selectionRect) return prev;
+
+            let next = { ...prev };
+            if (isDrag && data.x !== undefined && data.y !== undefined) {
+                const deltaX = data.x - selectionRect.x;
+                const deltaY = data.y - selectionRect.y;
+                const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
+                next.image_layers = next.image_layers.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
+                next.additional_texts = next.additional_texts.map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
+                next.shapes = (next.shapes || []).map(l => selectedIds.includes(l.id) ? updatePos(l) : l);
+            } else if (!isDrag && data.w !== undefined && data.h !== undefined && data.x !== undefined && data.y !== undefined) {
+                const scaleX = data.w / selectionRect.width;
+                const scaleY = data.h / selectionRect.height;
+                const updateSizePos = (l: any) => {
+                    const relX = l.position_x - selectionRect.x;
+                    const relY = l.position_y - selectionRect.y;
+                    return {
+                        ...l,
+                        width: l.width * scaleX,
+                        height: l.height * scaleY,
+                        position_x: data.x! + (relX * scaleX),
+                        position_y: data.y! + (relY * scaleY),
+                        font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined
+                    };
+                };
+                next.image_layers = next.image_layers.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
+                next.additional_texts = next.additional_texts.map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
+                next.shapes = (next.shapes || []).map(l => selectedIds.includes(l.id) ? updateSizePos(l) : l);
+            }
+            return next;
+        }, true);
     };
 
     const handleGroupTransform = (groupId: string, data: { x?: number, y?: number, w?: number, h?: number }, isDrag: boolean) => {
-        const group = groups?.find(g => g.id === groupId);
-        if (!group) return;
-        const allLayers = [...image_layers, ...additional_texts, ...(shapes || [])];
-        const groupRect = getBoundingBox(group.layerIds, allLayers);
-        if (!groupRect) return;
-        let newConfig = { ...config };
-        if (isDrag && data.x !== undefined && data.y !== undefined) {
-            const deltaX = data.x - groupRect.x;
-            const deltaY = data.y - groupRect.y;
-            const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
-            newConfig.image_layers = newConfig.image_layers.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
-            newConfig.additional_texts = newConfig.additional_texts.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
-            newConfig.shapes = (newConfig.shapes || []).map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
-        } else if (!isDrag && data.w !== undefined && data.h !== undefined && data.x !== undefined && data.y !== undefined) {
-            const scaleX = data.w / groupRect.width;
-            const scaleY = data.h / groupRect.height;
-            const updateSizePos = (l: any) => {
-                const relX = l.position_x - groupRect.x;
-                const relY = l.position_y - groupRect.y;
-                return { ...l, width: l.width * scaleX, height: l.height * scaleY, position_x: data.x! + (relX * scaleX), position_y: data.y! + (relY * scaleY), font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined };
-            };
-            newConfig.image_layers = newConfig.image_layers.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
-            newConfig.additional_texts = newConfig.additional_texts.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
-            newConfig.shapes = (newConfig.shapes || []).map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
-        }
-        onUpdate(newConfig, true);
+        onUpdate(prev => {
+            const group = prev.groups?.find(g => g.id === groupId);
+            if (!group) return prev;
+            const allLayers = [...(prev.image_layers || []), ...(prev.additional_texts || []), ...(prev.shapes || [])];
+            const groupRect = getBoundingBox(group.layerIds, allLayers);
+            if (!groupRect) return prev;
+
+            let next = { ...prev };
+            if (isDrag && data.x !== undefined && data.y !== undefined) {
+                const deltaX = data.x - groupRect.x;
+                const deltaY = data.y - groupRect.y;
+                const updatePos = (l: any) => ({ ...l, position_x: l.position_x + deltaX, position_y: l.position_y + deltaY });
+                next.image_layers = next.image_layers.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
+                next.additional_texts = next.additional_texts.map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
+                next.shapes = (next.shapes || []).map(l => group.layerIds.includes(l.id) ? updatePos(l) : l);
+            } else if (!isDrag && data.w !== undefined && data.h !== undefined && data.x !== undefined && data.y !== undefined) {
+                const scaleX = data.w / groupRect.width;
+                const scaleY = data.h / groupRect.height;
+                const updateSizePos = (l: any) => {
+                    const relX = l.position_x - groupRect.x;
+                    const relY = l.position_y - groupRect.y;
+                    return {
+                        ...l,
+                        width: l.width * scaleX,
+                        height: l.height * scaleY,
+                        position_x: data.x! + (relX * scaleX),
+                        position_y: data.y! + (relY * scaleY),
+                        font_size: l.font_size ? l.font_size * Math.min(scaleX, scaleY) : undefined
+                    };
+                };
+                next.image_layers = next.image_layers.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
+                next.additional_texts = next.additional_texts.map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
+                next.shapes = (next.shapes || []).map(l => group.layerIds.includes(l.id) ? updateSizePos(l) : l);
+            }
+            return next;
+        }, true);
     };
 
     const patternStyle = getBackgroundPatternStyle(canvas.background_pattern, canvas.background_pattern_color, canvas.background_pattern_opacity);

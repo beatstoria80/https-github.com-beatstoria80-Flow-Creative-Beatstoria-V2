@@ -55,18 +55,48 @@ const deepCopy = <T,>(obj: T): T => {
 
 const repairConfig = (config: AppConfig): AppConfig => {
     if (!config) return deepCopy(DEFAULT_CONFIG);
-    const d = DEFAULT_CONFIG;
+    const d = deepCopy(DEFAULT_CONFIG);
+
+    // Ensure core arrays exist
+    const image_layers = Array.isArray(config.image_layers) ? config.image_layers : [];
+    const additional_texts = Array.isArray(config.additional_texts) ? config.additional_texts : [];
+    const shapes = Array.isArray(config.shapes) ? config.shapes : [];
+
+    // Rebuild layerOrder if missing or corrupted
+    let layerOrder = Array.isArray(config.layerOrder) ? [...config.layerOrder] : [...d.layerOrder];
+
+    // Ensure global-fx exists
+    if (!layerOrder.includes('global-fx')) {
+        layerOrder.unshift('global-fx');
+    }
+
+    // Collect all IDs that SHOULD be in layerOrder
+    const allLayerIds = new Set([
+        ...image_layers.map(l => l.id),
+        ...additional_texts.map(l => l.id),
+        ...shapes.map(l => (l as any).id)
+    ]);
+
+    // Add missing layers to layerOrder
+    allLayerIds.forEach(id => {
+        if (!layerOrder.includes(id)) layerOrder.push(id);
+    });
+
+    // Remove nonexistent layers from layerOrder (except global-fx)
+    layerOrder = layerOrder.filter(id => id === 'global-fx' || allLayerIds.has(id));
+
     return {
         ...d,
         ...config,
         id: config.id || `page-${Date.now()}`,
         canvas: { ...d.canvas, ...(config.canvas || {}) },
         typography: { ...d.typography, ...(config.typography || {}) },
-        additional_texts: Array.isArray(config.additional_texts) ? config.additional_texts : [],
-        image_layers: Array.isArray(config.image_layers) ? config.image_layers : [],
-        shapes: Array.isArray(config.shapes) ? config.shapes : [],
-        layerOrder: Array.isArray(config.layerOrder) ? config.layerOrder : d.layerOrder,
-        groups: Array.isArray(config.groups) ? config.groups : []
+        image_layers,
+        additional_texts,
+        shapes,
+        groups: Array.isArray(config.groups) ? config.groups : [],
+        layerOrder,
+        stash: Array.isArray(config.stash) ? config.stash : []
     };
 };
 
@@ -303,35 +333,48 @@ export const App: React.FC = () => {
 
     const handleApplyToCanvas = useCallback((src: string) => {
         if (!src) return;
-        const img = new Image();
-        img.onload = () => {
-            const nw = img.naturalWidth || 800;
-            const nh = img.naturalHeight || 800;
-            const ratio = nw / nh;
-            const newId = `image-${Date.now()}`;
-            // CRITICAL FIX: compute dimensions inside updater so canvas size is always fresh
-            setConfig(prev => {
-                const canvasW = prev.canvas.width;
-                const canvasH = prev.canvas.height;
-                let w = Math.min(nw, canvasW * 0.72);
-                let h = w / ratio;
-                if (h > canvasH * 0.72) { h = canvasH * 0.72; w = h * ratio; }
-                w = Math.max(50, Math.round(w));
-                h = Math.max(50, Math.round(h));
-                const newLayer: ImageLayer = {
-                    id: newId, src,
-                    position_x: Math.round((canvasW - w) / 2),
-                    position_y: Math.round((canvasH - h) / 2),
-                    width: w, height: h,
-                    rotation: 0, locked: false, hidden: false,
-                    opacity: 1, blend_mode: 'normal',
-                    effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0
-                };
-                return { ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] };
-            }, true);
-            setTimeout(() => setSelectedIds([newId]), 80);
-        };
-        img.src = src;
+        try {
+            const img = new Image();
+            img.onload = () => {
+                const nw = img.naturalWidth || 800;
+                const nh = img.naturalHeight || 800;
+                const ratio = nw / nh;
+                const newId = `image-${Date.now()}`;
+
+                setConfig(prev => {
+                    const canvasW = prev.canvas?.width || 1080;
+                    const canvasH = prev.canvas?.height || 1080;
+
+                    let w = Math.min(nw, canvasW * 0.72);
+                    let h = w / ratio;
+                    if (h > canvasH * 0.72) { h = canvasH * 0.72; w = h * ratio; }
+
+                    w = Math.max(50, Math.round(w));
+                    h = Math.max(50, Math.round(h));
+
+                    const newLayer: ImageLayer = {
+                        id: newId, src,
+                        position_x: Math.round((canvasW - w) / 2),
+                        position_y: Math.round((canvasH - h) / 2),
+                        width: w, height: h,
+                        rotation: 0, locked: false, hidden: false,
+                        opacity: 1, blend_mode: 'normal',
+                        effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0
+                    };
+                    return { ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] };
+                }, true);
+
+                setTimeout(() => setSelectedIds([newId]), 80);
+                showToast("DEPLOYED TO CANVAS");
+            };
+            img.onerror = () => {
+                showToast("LOAD ERROR");
+            };
+            img.src = src;
+        } catch (e) {
+            console.error("Apply to canvas failed", e);
+            showToast("ENGINE ERROR");
+        }
     }, [setConfig]);
 
     const handleSendMessage = async (text?: string) => {
@@ -1021,22 +1064,25 @@ export const App: React.FC = () => {
                                                     domId={`canvas-export-${pageConfig.id}`}
                                                     config={pageConfig}
                                                     scale={zoom}
-                                                    onUpdate={(newConfig, save) => {
+                                                    onUpdate={(update, save) => {
                                                         setAppState(prev => {
                                                             const current = prev.history[prev.index];
                                                             const targetIdx = current.pages.findIndex(p => p.id === pageConfig.id);
                                                             if (targetIdx === -1) return prev;
 
                                                             const newPages = [...current.pages];
+                                                            const oldConfig = newPages[targetIdx];
+                                                            const newConfig = typeof update === 'function' ? update(oldConfig) : update;
                                                             newPages[targetIdx] = newConfig;
+
                                                             const nState = { ...current, pages: newPages };
 
                                                             if (save) {
                                                                 const nHist = prev.history.slice(0, prev.index + 1);
                                                                 nHist.push(deepCopy(nState));
+                                                                if (nHist.length > 30) nHist.shift();
                                                                 return { history: nHist, index: nHist.length - 1 };
                                                             } else {
-                                                                // Fast path for non-history updates
                                                                 const nHist = [...prev.history];
                                                                 nHist[prev.index] = nState;
                                                                 return { ...prev, history: nHist };
