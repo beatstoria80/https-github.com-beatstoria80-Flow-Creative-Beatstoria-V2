@@ -618,7 +618,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 zIndex: 0, isolation: 'isolate', willChange: 'transform'
             }}
             onMouseDown={handleContainerMouseDown}
-            className={`relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'} ${handToolActive ? 'pointer-events-none' : 'cursor-default'}`}
+            className={`relative shadow-sm transition-shadow duration-200 ${isActive ? 'ring-4 ring-indigo-500/50' : 'ring-1 ring-slate-200'} ${handToolActive ? 'cursor-grab' : 'cursor-default'}`}
         >
             {/* BACKGROUND STACK */}
             <div className="absolute inset-0 z-0" style={{ transform: 'translate3d(0,0,0)', pointerEvents: 'none', background: bgBase }}>
@@ -681,13 +681,19 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 const parentGroup = groups?.find(g => g.layerIds.includes(id));
                 const isGroupSelected = parentGroup && selectedIds.includes(parentGroup.id);
                 const isInteracting = interactingId === id;
-                const disableInteraction = readOnly || isGroupSelected || (isMultiSelection && isSelected) || handToolActive;
+                // CRITICAL FIX: Do NOT disable individual layers during multi-selection.
+                // The multi-select Rnd box handles batch transforms.
+                // Disabling layers in multi-select makes them unresponsive to the group drag.
+                const disableInteraction = readOnly || !!isGroupSelected || handToolActive;
 
                 const commonProps = {
                     scale: scale,
                     onMouseDown: (e: any) => handleLayerMouseDown(id, e),
                     cancel: ".no-drag",
-                    className: `selectable-layer layer-node-${id} ${handToolActive ? 'pointer-events-none' : ''}`,
+                    className: `selectable-layer layer-node-${id}`,
+                    // CRITICAL FIX: Disable individual drag in multi-selection to prevent conflict
+                    // with the batch-transform Rnd box. Clicks still work for selection changes.
+                    disableDragging: disableInteraction || (isMultiSelection && isSelected),
                     onDragStart: () => setInteractingId(id),
                     onResizeStart: () => setInteractingId(id),
                     onDragStop: (e: any, d: any) => { setInteractingId(null); updateLayer(id, { position_x: d.x, position_y: d.y }, true); },
@@ -735,7 +741,9 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                     if (!finalFilter) finalFilter = '';
 
                     return (
-                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked} enableResizing={!disableInteraction && !shape.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
+                        // CRITICAL FIX: Always keep pointer-events:auto so layers can be clicked
+                        // even in multi-selection. Drag is controlled via disableDragging in commonProps.
+                        <Rnd key={id} size={{ width: shape.width, height: height }} position={{ x: shape.position_x, y: shape.position_y }} disableDragging={disableInteraction || shape.locked || (isMultiSelection && isSelected)} enableResizing={!disableInteraction && !shape.locked && !isMultiSelection} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', position: 'relative', transform: `rotate(${shape.rotation}deg)`, transformOrigin: 'center center' }}>
                                 {isGlassMode ? (
                                     <div style={{ position: 'absolute', inset: 0, borderRadius: borderRadius, boxShadow: finalBoxShadow, clipPath: clipPath, overflow: 'hidden' }}>
@@ -752,6 +760,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                 }
 
                 const img = image_layers.find(l => l.id === id);
+
                 if (img && !img.hidden) {
                     const maskScale = img.mask_content_scale ?? 1;
                     const maskX = img.mask_content_x ?? 0;
@@ -769,7 +778,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
                         maskMode: 'alpha', WebkitMaskMode: 'alpha'
                     } : {};
                     return (
-                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked} enableResizing={!disableInteraction && !img.locked} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
+                        <Rnd key={id} size={{ width: img.width, height: img.height }} position={{ x: img.position_x, y: img.position_y }} lockAspectRatio={true} disableDragging={disableInteraction || img.locked || (isMultiSelection && isSelected)} enableResizing={!disableInteraction && !img.locked && !isMultiSelection} style={{ zIndex: index + 10, pointerEvents: disableInteraction ? 'none' : 'auto', border: (isSelected && !hideControls && !isGroupSelected && !isMultiSelection) ? '2px solid #6366f1' : 'none', willChange: 'transform' }} {...commonProps}>
                             <div style={{ width: '100%', height: '100%', transform: `rotate(${img.rotation}deg)`, transformOrigin: 'center center' }}>
                                 <div style={{ width: '100%', height: '100%', opacity: img.opacity, mixBlendMode: img.blend_mode as any }}>
                                     <div style={{ width: '100%', height: '100%', ...maskStyle }}>
@@ -784,7 +793,10 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({ config, scale, onU
 
                 const txt = additional_texts.find(l => l.id === id);
                 if (txt && !txt.hidden) {
-                    return <TextLayerItem key={txt.id} layer={txt} zIndex={index + 10} isSelected={isSelected} isGroupSelected={isGroupSelected || isMultiSelection} hideControls={hideControls} readOnly={readOnly} scale={scale} onUpdate={updateLayer} onSelect={(e) => handleLayerMouseDown(txt.id, e)} isInteracting={isInteracting} />;
+                    // CRITICAL FIX: isGroupSelected true ONLY when actually in a group selection,
+                    // NOT just because isMultiSelection is true. Passing isMultiSelection as
+                    // isGroupSelected was disabling pointer-events on all text layers in multi-select.
+                    return <TextLayerItem key={txt.id} layer={txt} zIndex={index + 10} isSelected={isSelected} isGroupSelected={!!isGroupSelected} hideControls={hideControls} readOnly={readOnly} scale={scale} onUpdate={updateLayer} onSelect={(e) => handleLayerMouseDown(txt.id, e)} isInteracting={isInteracting} />;
                 }
                 return null;
             })}
