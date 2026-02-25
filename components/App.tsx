@@ -169,6 +169,40 @@ export const App: React.FC = () => {
         localStorage.setItem('space_studio_theme', theme);
     }, [theme]);
 
+    // CRITICAL AUTO-SAVE: Debounced save to IndexedDB whenever appState changes.
+    // Without this, all layer changes (new elements, etc.) are LOST on page refresh
+    // because the app only loads from IndexedDB on startup.
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (isPurgingRef.current) return;
+        if (!currentProjectId || currentProjectId.startsWith('proj-blank')) return;
+
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+        autoSaveTimerRef.current = setTimeout(async () => {
+            try {
+                setIsAutoSaving(true);
+                const projectName = currentState.pages[0]?.projectName || 'UNTITLED';
+                await saveProjectToDB({
+                    id: currentProjectId,
+                    name: projectName,
+                    lastSaved: Date.now(),
+                    data: currentState
+                });
+                setLastSaved(new Date());
+            } catch (e) {
+                console.warn('Auto-save failed:', e);
+            } finally {
+                setIsAutoSaving(false);
+            }
+        }, 1500); // 1.5 second debounce
+
+        return () => {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentState, currentProjectId]);
+
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
     const setConfig = useCallback((value: AppConfig | ((prev: AppConfig) => AppConfig), saveToHistory: boolean = true) => {
