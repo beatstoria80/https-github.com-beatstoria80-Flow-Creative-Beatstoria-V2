@@ -1266,7 +1266,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                 <button onClick={onClose} className={`p-2 rounded-full transition-all ${isDark ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-500'}`}><X size={24} /></button>
             </header>
 
-            <main className="flex-1 overflow-hidden px-8 py-4 flex gap-6 w-full max-w-none mx-auto relative">
+            <main className="flex-1 px-8 py-4 flex gap-6 w-full max-w-none mx-auto relative">
                 <div className="flex-1 flex flex-col gap-4 min-w-0 h-full overflow-visible">
 
                     <section className={`flex items-center gap-2 border p-1 rounded-xl shrink-0 overflow-visible relative shadow-sm backdrop-blur-md w-full ${isDark ? 'bg-black/60 border-white/10' : 'bg-white border-slate-200'}`}>
@@ -1397,7 +1397,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                 {previewFileId ? (
                                     <ResearchPreview file={attachedFiles.find(f => f.id === previewFileId)!} onBack={() => setPreviewFileId(null)} theme={theme} />
                                 ) : (
-                                    <div className={`flex-1 flex flex-col min-h-0 rounded-3xl border overflow-hidden shadow-inner relative ${isDark ? 'bg-black/40 border-white/5' : 'bg-white border-slate-200'}`}>
+                                    <div className={`flex-1 flex flex-col min-h-0 rounded-3xl border shadow-inner relative ${isDark ? 'bg-black/40 border-white/5' : 'bg-white border-slate-200'}`}>
                                         <div ref={scriptAreaRef} className="flex-1 overflow-y-auto studio-scrollbar p-6 space-y-3 relative">
                                             {script.length === 0 ? (
                                                 <div className="flex-1 h-full flex flex-col items-center justify-center gap-10">
@@ -1560,7 +1560,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                             )}
                                         </div>
 
-                                        <div className={`shrink-0 p-2 border-t backdrop-blur-3xl relative z-40 overflow-hidden min-h-[50px] flex flex-col justify-center ${isDark ? 'border-white/10 bg-black/95' : 'border-slate-200 bg-white/95'}`}>
+                                        <div className={`shrink-0 p-2 border-t backdrop-blur-3xl relative z-[100] overflow-visible min-h-[50px] flex flex-col justify-center ${isDark ? 'border-white/10 bg-black/95' : 'border-slate-200 bg-white/95'}`}>
                                             <div className="absolute inset-x-0 bottom-0 h-12 opacity-90 pointer-events-none flex items-end justify-center"><FrequencySpectrum analyser={analyserRef.current} isPlaying={isPlaying} /></div>
                                             <div className="max-w-[1600px] mx-auto w-full flex items-center gap-4 relative z-10 px-2">
                                                 <div className={`flex items-center gap-1 p-0.5 rounded-lg border shrink-0 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-slate-50 border-slate-200'}`}><button onClick={() => { if (activePlaybackType === 'script' && playingLineIndex !== null && playingLineIndex > 0) { const prevLine = script[playingLineIndex - 1]; if (prevLine && prevLine.audioBuffer) handleStartPlayback(prevLine.audioBuffer, 0, playingLineIndex - 1); } else if (activePlaybackType === 'reference') handlePlayReferenceMedia(0); }} className="p-1.5 rounded-md hover:bg-black/5 text-slate-400 active:scale-90"><SkipBack size={14} fill="currentColor" /></button><button onClick={toggleMasterPlayback} disabled={!isAnyAudioReady && !activeMedia} className={`w-8 h-8 flex items-center justify-center rounded-full shadow-lg hover:scale-105 active:scale-[0.95] transition-all ${(isAnyAudioReady || activeMedia) ? 'bg-indigo-600' : 'bg-slate-200 opacity-30'}`}>{isPlaying ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" className="ml-0.5" />}</button><button onClick={() => { if (activePlaybackType === 'script' && playingLineIndex !== null && playingLineIndex < script.length - 1) { const nextLine = script[playingLineIndex + 1]; if (nextLine && nextLine.audioBuffer) handleStartPlayback(nextLine.audioBuffer, 0, playingLineIndex + 1); } }} className="p-1.5 rounded-md hover:bg-black/5 text-slate-400 active:scale-90"><SkipForward size={14} fill="currentColor" /></button></div>
