@@ -305,15 +305,34 @@ export const App: React.FC = () => {
         if (!src) return;
         const img = new Image();
         img.onload = () => {
-            const canvasW = activePageConfig.canvas.width; const canvasH = activePageConfig.canvas.height;
-            let w = 600; let h = 600 / (img.naturalWidth / img.naturalHeight);
+            const nw = img.naturalWidth || 800;
+            const nh = img.naturalHeight || 800;
+            const ratio = nw / nh;
             const newId = `image-${Date.now()}`;
-            const newLayer: ImageLayer = { id: newId, src, position_x: (canvasW - w) / 2, position_y: (canvasH - h) / 2, width: w, height: h, rotation: 0, locked: false, hidden: false, opacity: 1, blend_mode: 'normal', effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0 };
-            setConfig(prev => ({ ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] }), true);
-            setTimeout(() => setSelectedIds([newId]), 0);
+            // CRITICAL FIX: compute dimensions inside updater so canvas size is always fresh
+            setConfig(prev => {
+                const canvasW = prev.canvas.width;
+                const canvasH = prev.canvas.height;
+                let w = Math.min(nw, canvasW * 0.72);
+                let h = w / ratio;
+                if (h > canvasH * 0.72) { h = canvasH * 0.72; w = h * ratio; }
+                w = Math.max(50, Math.round(w));
+                h = Math.max(50, Math.round(h));
+                const newLayer: ImageLayer = {
+                    id: newId, src,
+                    position_x: Math.round((canvasW - w) / 2),
+                    position_y: Math.round((canvasH - h) / 2),
+                    width: w, height: h,
+                    rotation: 0, locked: false, hidden: false,
+                    opacity: 1, blend_mode: 'normal',
+                    effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0
+                };
+                return { ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] };
+            }, true);
+            setTimeout(() => setSelectedIds([newId]), 80);
         };
         img.src = src;
-    }, [activePageConfig, setConfig]);
+    }, [setConfig]);
 
     const handleSendMessage = async (text?: string) => {
         const textToSend = text || chatInput; if (!textToSend?.trim()) return;

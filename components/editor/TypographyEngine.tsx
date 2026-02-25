@@ -131,30 +131,31 @@ export const TypographyEngine: React.FC<TypographyEngineProps> = ({ config, setC
 
     const handleAddNew = () => {
         const newId = `text-${Date.now()}`;
-        const canvasW = config.canvas.width;
-        const canvasH = config.canvas.height;
-        const textW = Math.min(600, canvasW * 0.8);
-        const textH = 160;
-        // CRITICAL FIX: Ensure position is always positive & centered on canvas
-        const newLayer: TextLayer = {
-            id: newId,
-            text: "NEW NODE",
-            font: "Montserrat Medium",
-            font_size: 120,
-            color: "#000",
-            position_x: Math.max(0, canvasW / 2 - textW / 2),
-            position_y: Math.max(0, canvasH / 2 - textH / 2),
-            width: textW,
-            height: textH,
-            rotation: 0,
-            alignment: "center",
-            effects: { ...DEFAULT_EFFECTS },
-            resize_mode: 'auto-width',
-            wrap_enabled: false
-        };
-        setConfig(prev => ({ ...prev, additional_texts: [...prev.additional_texts, newLayer], layerOrder: [...prev.layerOrder, newId] }), true);
-        // CRITICAL FIX: Delay select so state is committed before selection
-        setTimeout(() => onSelectLayer(newId), 50);
+        // CRITICAL FIX: compute position inside setConfig updater with fresh prev.canvas
+        setConfig(prev => {
+            const canvasW = prev.canvas.width;
+            const canvasH = prev.canvas.height;
+            const textW = Math.min(600, canvasW * 0.8);
+            const textH = 160;
+            const newLayer: TextLayer = {
+                id: newId,
+                text: "NEW NODE",
+                font: "Montserrat Medium",
+                font_size: 120,
+                color: "#000",
+                position_x: Math.max(0, Math.round(canvasW / 2 - textW / 2)),
+                position_y: Math.max(0, Math.round(canvasH / 2 - textH / 2)),
+                width: textW,
+                height: textH,
+                rotation: 0,
+                alignment: "center",
+                effects: { ...DEFAULT_EFFECTS },
+                resize_mode: 'auto-width',
+                wrap_enabled: false
+            };
+            return { ...prev, additional_texts: [...prev.additional_texts, newLayer], layerOrder: [...prev.layerOrder, newId] };
+        }, true);
+        setTimeout(() => onSelectLayer(newId), 80);
     };
 
     const currentFont = getValue('font') || 'Montserrat Medium';
@@ -319,8 +320,8 @@ export const TypographyEngine: React.FC<TypographyEngineProps> = ({ config, setC
                                                         key={m.id}
                                                         onClick={() => updateProperty('mask_type', m.id, true)}
                                                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[8px] font-bold uppercase transition-all ${(getValue('mask_type') || 'fade-bottom') === m.id
-                                                                ? 'bg-teal-600 border-teal-500 text-white shadow-md'
-                                                                : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
+                                                            ? 'bg-teal-600 border-teal-500 text-white shadow-md'
+                                                            : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
                                                             }`}
                                                     >
                                                         {m.icon} {m.label}

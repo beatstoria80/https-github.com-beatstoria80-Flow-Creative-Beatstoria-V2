@@ -163,23 +163,41 @@ export const EditorControls: React.FC<EditorControlsProps> = React.memo(({
                     const img = new Image();
                     img.onload = () => {
                         const newId = `img-${Date.now()}`;
-                        const newLayer: ImageLayer = {
-                            id: newId, src,
-                            position_x: config.canvas.width / 2 - img.width / 4,
-                            position_y: config.canvas.height / 2 - img.height / 4,
-                            width: img.width / 2, height: img.height / 2,
-                            rotation: 0, locked: false, hidden: false,
-                            effects: { ...DEFAULT_EFFECTS }
-                        };
-                        setConfig(prev => ({ ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] }), true);
-                        setTimeout(() => onSelectLayer(newId), 50);
+                        // CRITICAL FIX: use naturalWidth/naturalHeight (not img.width which can be 0)
+                        // and compute inside setConfig updater for fresh canvas dimensions
+                        const nw = img.naturalWidth || 800;
+                        const nh = img.naturalHeight || 800;
+                        const ratio = nw / nh;
+                        setConfig(prev => {
+                            const cw = prev.canvas.width;
+                            const ch = prev.canvas.height;
+                            let w = Math.min(nw, cw * 0.72);
+                            let h = w / ratio;
+                            if (h > ch * 0.72) { h = ch * 0.72; w = h * ratio; }
+                            w = Math.max(50, Math.round(w));
+                            h = Math.max(50, Math.round(h));
+                            const newLayer: ImageLayer = {
+                                id: newId, src,
+                                position_x: Math.round(cw / 2 - w / 2),
+                                position_y: Math.round(ch / 2 - h / 2),
+                                width: w, height: h,
+                                rotation: 0, locked: false, hidden: false,
+                                opacity: 1, blend_mode: 'normal',
+                                effects_enabled: false,
+                                effects: { ...DEFAULT_EFFECTS },
+                                border_radius: 0,
+                            };
+                            return { ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] };
+                        }, true);
+                        setTimeout(() => onSelectLayer(newId), 80);
                     };
+                    img.onerror = () => console.error('[EditorControls] Failed to load uploaded image');
                     img.src = src;
                 }
             };
             reader.readAsDataURL(e.target.files[0]);
         }
-    }, [config.canvas.width, config.canvas.height, onSelectLayer, setConfig]);
+    }, [onSelectLayer, setConfig]);
 
     const handleSectionToggle = useCallback((id: string) => {
         setActiveSection(prev => prev === id ? null : id);

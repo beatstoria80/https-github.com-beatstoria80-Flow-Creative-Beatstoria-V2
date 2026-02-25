@@ -77,40 +77,58 @@ export const AssetEngine: React.FC<AssetEngineProps> = ({
   const addAssetToCanvas = (src: string, autoFX: boolean = false) => {
     const img = new Image();
     img.onload = () => {
-      const containerW = config.canvas.width;
-      const containerH = config.canvas.height;
-      const maxWidth = containerW * 0.7;
-      const maxHeight = containerH * 0.7;
-
-      let width = img.naturalWidth || 600;
-      let height = img.naturalHeight || 600;
-      const ratio = width / height;
-
-      if (width > maxWidth) {
-        width = maxWidth;
-        height = width / ratio;
-      }
-      if (height > maxHeight) {
-        height = maxHeight;
-        width = height * ratio;
-      }
-
+      // CRITICAL FIX: Read naturalWidth/naturalHeight (never 0 like img.width can be)
+      const naturalW = img.naturalWidth || 800;
+      const naturalH = img.naturalHeight || 800;
+      const ratio = naturalW / naturalH;
       const newId = `image-${Date.now()}`;
-      // Center the layer on canvas using top-left corner offset from center
-      const newLayer: ImageLayer = {
-        id: newId, src,
-        position_x: containerW / 2 - width / 2,
-        position_y: containerH / 2 - height / 2,
-        width, height, rotation: 0, locked: false, hidden: false, opacity: 1,
-        blend_mode: 'normal', effects_enabled: autoFX, effects: { ...DEFAULT_EFFECTS }
-      };
-      // CRITICAL FIX: Pass true to save to history, prevents layer loss on state updates
-      setConfig(prev => ({
-        ...prev,
-        image_layers: [...prev.image_layers, newLayer],
-        layerOrder: [...prev.layerOrder, newId]
-      }), true);
-      setTimeout(() => onSelectLayer(newId), 50);
+
+      // CRITICAL FIX: Compute positioning INSIDE setConfig updater so we always
+      // use the latest canvas dimensions, not a potentially stale closure value.
+      setConfig(prev => {
+        const containerW = prev.canvas.width;
+        const containerH = prev.canvas.height;
+        const maxWidth = containerW * 0.72;
+        const maxHeight = containerH * 0.72;
+
+        let width = naturalW;
+        let height = naturalH;
+
+        if (width > maxWidth) { width = maxWidth; height = width / ratio; }
+        if (height > maxHeight) { height = maxHeight; width = height * ratio; }
+
+        // Ensure minimum size
+        width = Math.max(50, Math.round(width));
+        height = Math.max(50, Math.round(height));
+
+        const newLayer: ImageLayer = {
+          id: newId,
+          src,
+          position_x: Math.round(containerW / 2 - width / 2),
+          position_y: Math.round(containerH / 2 - height / 2),
+          width,
+          height,
+          rotation: 0,
+          locked: false,
+          hidden: false,
+          opacity: 1,
+          blend_mode: 'normal',
+          effects_enabled: autoFX,
+          effects: { ...DEFAULT_EFFECTS },
+          border_radius: 0,
+        };
+        return {
+          ...prev,
+          image_layers: [...prev.image_layers, newLayer],
+          layerOrder: [...prev.layerOrder, newId],
+        };
+      }, true);
+
+      // Small delay so setConfig state is committed before selecting
+      setTimeout(() => onSelectLayer(newId), 80);
+    };
+    img.onerror = () => {
+      console.error('[AssetEngine] Failed to load image for canvas insertion');
     };
     img.src = src;
   };
