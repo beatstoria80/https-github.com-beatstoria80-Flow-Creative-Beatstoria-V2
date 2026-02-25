@@ -628,10 +628,14 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                     if (data && data.script) {
                         saveOrUpdateHistory(data);
                         handleLoadHistory(data);
+                        showToast("SESSION IMPORTED");
                     }
-                } catch (err) { alert("Format file invalid."); }
+                } catch (err) {
+                    console.error("Import Error:", err);
+                    showToast("INVALID FILE FORMAT");
+                }
             };
-            reader.readAsDataURL(file);
+            reader.readAsText(file);
         }
     };
 
@@ -845,7 +849,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         const selectedVoice = spk.gender === 'male' ? (style?.maleVoice || 'Puck') : (style?.femaleVoice || 'Kore');
         try {
             const ai = new GoogleGenAI({ apiKey: getApiKey() });
-            const response = await ai.models.generateContent({ model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
+            const response = await ai.models.generateContent({ model: "gemini-1.5-flash", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
             const base64Audio = response.candidates?.[0]?.content?.parts[0]?.inlineData?.data;
             if (base64Audio) {
                 const ctx = getSafeAudioContext(); const buffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
@@ -889,7 +893,10 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
     };
 
     const handleGenerateScript = async (): Promise<{ script: ScriptLine[], sessionId: string | null }> => {
-        if (!context.trim() && attachedFiles.length === 0) { setErrorMsg("Input required."); return { script: [], sessionId: null }; }
+        if (!context.trim() && attachedFiles.length === 0) {
+            showToast("INPUT REQUIRED FOR GENERATION");
+            return { script: [], sessionId: null };
+        }
         setIsScripting(true); setScript([]); setResearchLabel("SINTESIS NEURAL AKTIF..."); handleStopPlayback();
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         try {
@@ -918,7 +925,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
       `;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
+                model: 'gemini-1.5-flash',
                 contents: richPrompt,
                 config: {
                     // @ts-ignore
@@ -950,7 +957,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
             return { script: parsedScript, sessionId: currentSessionId };
         } catch (e: any) {
             console.error("Script Generation Fault:", e);
-            setErrorMsg(`Fault: ${e.message}`);
+            showToast("GENERATION FAILED");
             return { script: [], sessionId: currentSessionId };
         } finally {
             setIsScripting(false);
@@ -960,7 +967,15 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
 
     const handleBatchGenerate = async () => {
         if (isGeneratingBatch) return;
-        if (script.length === 0) { if (isInputReady) { await handleGenerateScript(); return; } return; }
+        if (script.length === 0) {
+            if (isInputReady) {
+                await handleGenerateScript();
+                return;
+            } else {
+                showToast("INPUT REQUIRED: DIRECTIVE OR RESEARCH");
+                return;
+            }
+        }
         const activeScript = script; if (!activeScript || activeScript.length === 0) return;
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         const queue = activeScript.map((line, index) => ({ line, index })).filter(item => !item.line.audioBuffer);
@@ -978,13 +993,19 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                 saveOrUpdateHistory(session);
             }
             if (completed > 0) setTimeout(() => handleStartFullSequence(), 500);
-        } catch (e: any) { setErrorMsg("Interrupt."); } finally { setIsGeneratingBatch(false); setBatchProgress(0); }
+        } catch (e: any) { showToast("BATCH FAILED"); } finally { setIsGeneratingBatch(false); setBatchProgress(0); }
     };
 
     const handleClearWorkspace = () => {
         if (!isClearConfirming) { setIsClearConfirming(true); setTimeout(() => setIsClearConfirming(false), 3000); return; }
         handleStopPlayback(); setScript([]); setActiveSessionId(null); setContext(""); setAttachedFiles([]); setIsClearConfirming(false); setProjectName("SINTESIS NEURAL");
-        localStorage.removeItem('vs_draft_script'); localStorage.removeItem('vs_draft_context'); localStorage.getItem('vs_draft_session_id'); localStorage.removeItem('vs_draft_project_name');
+        localStorage.removeItem('vs_draft_script');
+        localStorage.removeItem('vs_draft_context');
+        localStorage.removeItem('vs_draft_session_id');
+        localStorage.removeItem('vs_draft_project_name');
+        localStorage.removeItem('vs_draft_speakers');
+        localStorage.removeItem('vs_draft_mode');
+        showToast("WORKSPACE CLEARED");
     };
 
     const handleBackToMenu = () => {
@@ -1478,7 +1499,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                                                     </div>
                                                                 </div>
 
-                                                                <div className={`shrink-0 flex items-center gap-1 transition-opacity self-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                                                <div className={`shrink-0 flex items-center gap-1 transition-opacity self-center ${isActive ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}>
                                                                     <button
                                                                         onClick={() => line.audioBuffer && handleStartPlayback(line.audioBuffer, 0, idx)}
                                                                         disabled={!line.audioBuffer}
@@ -1569,11 +1590,11 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                     <div className="w-full h-full relative">
                                         {activeMedia.type === 'video' ? (
                                             <>
-                                                <video ref={mediaRef as any} src={activeMedia.url} className="w-full h-full object-cover opacity-60" crossOrigin="anonymous" onTimeUpdate={onVideoTimeUpdate} onLoadedMetadata={onVideoMetadata} key={activeMediaId} />
-                                                <Film size={12} className="absolute text-white/80" />
+                                                <video ref={mediaRef as any} src={activeMedia.url} className="w-full h-full object-cover opacity-60 pointer-events-none" crossOrigin="anonymous" onTimeUpdate={onVideoTimeUpdate} onLoadedMetadata={onVideoMetadata} key={activeMediaId} />
+                                                <Film size={12} className="absolute text-white/80 pointer-events-none" />
                                             </>
                                         ) : activeMedia.type === 'audio' ? (
-                                            <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-500/10">
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-500/10 pointer-events-none">
                                                 <audio ref={mediaRef as any} src={activeMedia.url} onTimeUpdate={onVideoTimeUpdate} onLoadedMetadata={onVideoMetadata} key={activeMediaId} />
                                                 <div className="relative">
                                                     <Music size={14} className="text-indigo-400 animate-pulse" />
@@ -1582,9 +1603,9 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                                                 <span className="text-[6px] font-black text-indigo-400 mt-1 uppercase truncate max-w-full px-2">{activeMedia.name}</span>
                                             </div>
                                         ) : activeMedia.type === 'image' ? (
-                                            <img src={activeMedia.url} className="w-full h-full object-cover" />
+                                            <img src={activeMedia.url} className="w-full h-full object-cover pointer-events-none" />
                                         ) : (
-                                            <Music size={14} className="text-slate-400" />
+                                            <Music size={14} className="text-slate-400 pointer-events-none" />
                                         )}
                                     </div>
                                 ) : (
@@ -1645,7 +1666,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                             )}
                         </div>
 
-                        <button onClick={handleBatchGenerate} disabled={isScripting || isGeneratingBatch || (script.length === 0 && !isInputReady)} className={`h-[120px] w-[140px] text-white rounded-3xl flex flex-col items-center justify-center gap-2 shadow-2xl duration-500 active:scale-95 shrink-0 ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-50'}`}>{isGeneratingBatch || isScripting ? <Loader2 size={24} className="animate-spin" /> : isAllAudioReady ? <Play size={24} /> : <Scan size={24} />}<span className="font-black uppercase tracking-widest text-[9px] text-center leading-tight">{isGeneratingBatch || isScripting ? 'PROCESSING...' : isAllAudioReady ? 'PLAY\nSEQUENCE' : (script.length > 0 ? 'GENERATE\nAUDIO' : 'GENERATE\nSCRIPT')}</span></button>
+                        <button onClick={handleBatchGenerate} disabled={isScripting || isGeneratingBatch} className={`h-[120px] w-[140px] text-white rounded-3xl flex flex-col items-center justify-center gap-2 shadow-2xl duration-500 active:scale-95 shrink-0 disabled:opacity-30 disabled:grayscale ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-50'}`}>{isGeneratingBatch || isScripting ? <Loader2 size={24} className="animate-spin" /> : isAllAudioReady ? <Play size={24} /> : <Scan size={24} />}<span className="font-black uppercase tracking-widest text-[9px] text-center leading-tight">{isGeneratingBatch || isScripting ? 'PROCESSING...' : isAllAudioReady ? 'PLAY\nSEQUENCE' : (script.length > 0 ? 'GENERATE\nAUDIO' : 'GENERATE\nSCRIPT')}</span></button>
                     </div>
                 </div>
             </footer>
