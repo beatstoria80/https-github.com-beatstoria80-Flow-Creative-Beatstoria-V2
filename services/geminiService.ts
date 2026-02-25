@@ -1,6 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getAI = () => new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+const getAI = () => {
+    const localKey = localStorage.getItem('gemini_api_key');
+    const envKey = (import.meta as any).env.VITE_API_KEY || "";
+    return new GoogleGenAI({ apiKey: localKey || envKey });
+};
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

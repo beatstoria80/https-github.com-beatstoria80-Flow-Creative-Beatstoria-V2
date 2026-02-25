@@ -4,7 +4,7 @@ import {
   Zap, Layout, Wand2, ArrowRight, History, Clock, Monitor, Sparkles,
   Trophy, Dumbbell, Flame, Scissors, AlertCircle, Film, Clapperboard,
   Cpu, Box, Target, Layers, MousePointer2, BookOpen, Video, Type, Pencil,
-  Mic2
+  Mic2, Key, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -38,6 +38,8 @@ export const LandingPage: React.FC<LandingPageProps> = (props) => {
 
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [isDraggingScroll, setIsDraggingScroll] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || "");
+  const [isKeySaved, setIsKeySaved] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollStartRef = useRef({ y: 0, scrollTop: 0 });
@@ -75,6 +77,16 @@ export const LandingPage: React.FC<LandingPageProps> = (props) => {
     document.body.style.userSelect = 'none';
     if (containerRef.current) {
       scrollStartRef.current = { y: e.clientY, scrollTop: containerRef.current.scrollTop };
+    }
+  };
+
+  const saveApiKey = () => {
+    if (apiKey.trim()) {
+      localStorage.setItem('gemini_api_key', apiKey.trim());
+      setIsKeySaved(true);
+      setTimeout(() => setIsKeySaved(false), 3000);
+    } else {
+      localStorage.removeItem('gemini_api_key');
     }
   };
 
@@ -121,6 +133,51 @@ export const LandingPage: React.FC<LandingPageProps> = (props) => {
             <p className="text-lg text-slate-400 font-medium tracking-wide max-w-2xl mx-auto animate-in fade-in duration-1000 delay-500">
               Sintesis visual masa depan dengan kontrol presisi. Rancang kampanye editorial dan konten visual tanpa batas dengan kekuatan AI Gemini.
             </p>
+          </div>
+
+          {/* API KEY INPUT SECTION */}
+          <div className="max-w-md mx-auto w-full animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-600 pointer-events-auto">
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <Key size={14} className="text-orange-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Neural Gateway Key</span>
+                  </div>
+                  {isKeySaved && (
+                    <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 animate-pulse">
+                      <ShieldCheck size={12} />
+                      SISTEM TERHUBUNG
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Masukkan Google AI Studio API Key..."
+                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-orange-500/50 transition-all font-mono"
+                  />
+                  <button
+                    onClick={saveApiKey}
+                    className={`px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${isKeySaved
+                        ? 'bg-emerald-500 text-black'
+                        : 'bg-white text-black hover:bg-orange-500 hover:text-white'
+                      }`}
+                  >
+                    {isKeySaved ? <CheckCircle2 size={16} /> : 'Hubungkan'}
+                  </button>
+                </div>
+
+                <p className="text-[8px] font-bold text-slate-500 text-center uppercase tracking-wider">
+                  Key disimpan secara lokal di browser Anda untuk keamanan maksimal.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
