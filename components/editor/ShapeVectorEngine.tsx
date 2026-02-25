@@ -82,8 +82,8 @@ export const ShapeVectorEngine: React.FC<ShapeVectorEngineProps> = ({ config, se
         const newId = `shape-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         setConfig(prev => {
-            const containerW = prev.canvas?.width || 1080;
-            const containerH = prev.canvas?.height || 1080;
+            const containerW = Number(prev.canvas?.width) || 1080;
+            const containerH = Number(prev.canvas?.height) || 1080;
 
             const newShape: ShapeLayer = {
                 id: newId,

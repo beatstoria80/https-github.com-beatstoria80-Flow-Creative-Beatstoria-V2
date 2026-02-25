@@ -59,9 +59,39 @@ const repairConfig = (config: AppConfig): AppConfig => {
     const d = deepCopy(DEFAULT_CONFIG);
 
     // Ensure core arrays exist
-    const image_layers = Array.isArray(config.image_layers) ? config.image_layers : [];
-    const additional_texts = Array.isArray(config.additional_texts) ? config.additional_texts : [];
-    const shapes = Array.isArray(config.shapes) ? config.shapes : [];
+    const image_layers = (Array.isArray(config.image_layers) ? config.image_layers : []).map(l => ({
+        ...l,
+        position_x: Number(l.position_x) || 0,
+        position_y: Number(l.position_y) || 0,
+        width: Math.max(1, Number(l.width) || 100),
+        height: Math.max(1, Number(l.height) || 100),
+        rotation: Number(l.rotation) || 0,
+        opacity: l.opacity === undefined ? 1 : Number(l.opacity)
+    }));
+
+    const additional_texts = (Array.isArray(config.additional_texts) ? config.additional_texts : []).map(l => ({
+        ...l,
+        position_x: Number(l.position_x) || 0,
+        position_y: Number(l.position_y) || 0,
+        width: Math.max(1, Number(l.width) || 200),
+        height: Math.max(1, Number(l.height) || 50),
+        rotation: Number(l.rotation) || 0,
+        font_size: Number(l.font_size) || 16,
+        opacity: l.opacity === undefined ? 1 : Number(l.opacity)
+    }));
+
+    const shapes = (Array.isArray(config.shapes) ? config.shapes : []).map(l => ({
+        ...l,
+        position_x: Number(l.position_x) || 0,
+        position_y: Number(l.position_y) || 0,
+        width: Math.max(1, Number(l.width) || 100),
+        height: Math.max(1, Number(l.height) || 100),
+        rotation: Number(l.rotation) || 0,
+        opacity: l.opacity === undefined ? 1 : Number(l.opacity),
+        stroke_width: Number(l.stroke_width) || 0,
+        border_radius: Number(l.border_radius) || 0
+    }));
+
     const groups = Array.isArray(config.groups) ? config.groups : [];
 
     // Rebuild layerOrder if missing or corrupted
@@ -92,7 +122,12 @@ const repairConfig = (config: AppConfig): AppConfig => {
         ...d,
         ...config,
         id: config.id || `page-${Date.now()}`,
-        canvas: { ...d.canvas, ...(config.canvas || {}) },
+        canvas: {
+            ...d.canvas,
+            ...(config.canvas || {}),
+            width: Number(config.canvas?.width) || d.canvas.width,
+            height: Number(config.canvas?.height) || d.canvas.height
+        },
         typography: { ...d.typography, ...(config.typography || {}) },
         image_layers,
         additional_texts,
