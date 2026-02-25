@@ -72,9 +72,10 @@ const repairConfig = (config: AppConfig): AppConfig => {
 
     // Collect all IDs that SHOULD be in layerOrder
     const allLayerIds = new Set([
-        ...image_layers.map(l => l.id),
-        ...additional_texts.map(l => l.id),
-        ...shapes.map(l => (l as any).id)
+        ...image_layers.map(l => l.id).filter(Boolean),
+        ...additional_texts.map(l => l.id).filter(Boolean),
+        ...shapes.map(l => (l as any).id).filter(Boolean),
+        ...(Array.isArray(config.groups) ? config.groups.map(g => g.id).filter(Boolean) : [])
     ]);
 
     // Add missing layers to layerOrder
@@ -183,8 +184,8 @@ export const App: React.FC = () => {
     });
 
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-    const currentState = useMemo(() => appState.history[appState.index] || appState.history[0], [appState]);
-    const activePageConfig = useMemo(() => currentState.pages[currentState.activePageIndex] || repairConfig(deepCopy(DEFAULT_CONFIG)), [currentState]);
+    const currentState = useMemo(() => appState.history[appState.index] || { pages: [repairConfig(deepCopy(DEFAULT_CONFIG))], activePageIndex: 0 }, [appState]);
+    const activePageConfig = useMemo(() => repairConfig(currentState.pages[currentState.activePageIndex] || deepCopy(DEFAULT_CONFIG)), [currentState]);
 
     const selectedTextLayer = useMemo(() => {
         if (selectedIds.length === 1) return activePageConfig.additional_texts.find(t => t.id === selectedIds[0]);
@@ -242,13 +243,14 @@ export const App: React.FC = () => {
             if (!current) return prev;
             const currentConfig = current.pages[current.activePageIndex];
             const newConfig = typeof value === 'function' ? value(currentConfig) : value;
+            const repairedNewConfig = repairConfig(newConfig);
             const newPages = [...current.pages];
             if (newConfig.projectName !== currentConfig.projectName) {
                 for (let i = 0; i < newPages.length; i++) {
                     if (i !== current.activePageIndex) newPages[i] = { ...newPages[i], projectName: newConfig.projectName };
                 }
             }
-            newPages[current.activePageIndex] = newConfig;
+            newPages[current.activePageIndex] = repairedNewConfig;
             const newState = { ...current, pages: newPages };
             if (saveToHistory) {
                 const newHist = prev.history.slice(0, currentIdx + 1);
@@ -361,7 +363,7 @@ export const App: React.FC = () => {
                         opacity: 1, blend_mode: 'normal',
                         effects_enabled: false, effects: { ...DEFAULT_EFFECTS }, border_radius: 0
                     };
-                    return { ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] };
+                    return repairConfig({ ...prev, image_layers: [...prev.image_layers, newLayer], layerOrder: [...prev.layerOrder, newId] });
                 }, true);
 
                 setTimeout(() => setSelectedIds([newId]), 80);
@@ -1072,7 +1074,7 @@ export const App: React.FC = () => {
 
                                                             const newPages = [...current.pages];
                                                             const oldConfig = newPages[targetIdx];
-                                                            const newConfig = typeof update === 'function' ? update(oldConfig) : update;
+                                                            const newConfig = repairConfig(typeof update === 'function' ? update(oldConfig) : update);
                                                             newPages[targetIdx] = newConfig;
 
                                                             const nState = { ...current, pages: newPages };
