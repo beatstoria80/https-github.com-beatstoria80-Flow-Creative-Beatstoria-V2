@@ -54,16 +54,18 @@ const deepCopy = <T,>(obj: T): T => {
 };
 
 const repairConfig = (config: AppConfig): AppConfig => {
-    if (!config) return deepCopy(DEFAULT_CONFIG);
+    if (!config) return deepCopy({ ...DEFAULT_CONFIG, id: `page-${Date.now()}` });
+
     const d = deepCopy(DEFAULT_CONFIG);
 
     // Ensure core arrays exist
     const image_layers = Array.isArray(config.image_layers) ? config.image_layers : [];
     const additional_texts = Array.isArray(config.additional_texts) ? config.additional_texts : [];
     const shapes = Array.isArray(config.shapes) ? config.shapes : [];
+    const groups = Array.isArray(config.groups) ? config.groups : [];
 
     // Rebuild layerOrder if missing or corrupted
-    let layerOrder = Array.isArray(config.layerOrder) ? [...config.layerOrder] : [...d.layerOrder];
+    let layerOrder = Array.isArray(config.layerOrder) ? [...config.layerOrder] : [];
 
     // Ensure global-fx exists
     if (!layerOrder.includes('global-fx')) {
@@ -72,11 +74,11 @@ const repairConfig = (config: AppConfig): AppConfig => {
 
     // Collect all IDs that SHOULD be in layerOrder
     const allLayerIds = new Set([
-        ...image_layers.map(l => l.id).filter(Boolean),
-        ...additional_texts.map(l => l.id).filter(Boolean),
-        ...shapes.map(l => (l as any).id).filter(Boolean),
-        ...(Array.isArray(config.groups) ? config.groups.map(g => g.id).filter(Boolean) : [])
-    ]);
+        ...image_layers.map(l => l.id),
+        ...additional_texts.map(l => l.id),
+        ...shapes.map(l => (l as any).id),
+        ...groups.map(g => g.id)
+    ].filter(Boolean));
 
     // Add missing layers to layerOrder
     allLayerIds.forEach(id => {
@@ -95,7 +97,7 @@ const repairConfig = (config: AppConfig): AppConfig => {
         image_layers,
         additional_texts,
         shapes,
-        groups: Array.isArray(config.groups) ? config.groups : [],
+        groups,
         layerOrder,
         stash: Array.isArray(config.stash) ? config.stash : []
     };
@@ -242,12 +244,12 @@ export const App: React.FC = () => {
             const current = prev.history[currentIdx];
             if (!current) return prev;
             const currentConfig = current.pages[current.activePageIndex];
-            const newConfig = typeof value === 'function' ? value(currentConfig) : value;
-            const repairedNewConfig = repairConfig(newConfig);
+            const updatedConfig = typeof value === 'function' ? value(currentConfig) : { ...currentConfig, ...value };
+            const repairedNewConfig = repairConfig(updatedConfig);
             const newPages = [...current.pages];
-            if (newConfig.projectName !== currentConfig.projectName) {
+            if (updatedConfig.projectName !== currentConfig.projectName) {
                 for (let i = 0; i < newPages.length; i++) {
-                    if (i !== current.activePageIndex) newPages[i] = { ...newPages[i], projectName: newConfig.projectName };
+                    if (i !== current.activePageIndex) newPages[i] = { ...newPages[i], projectName: updatedConfig.projectName };
                 }
             }
             newPages[current.activePageIndex] = repairedNewConfig;
@@ -415,10 +417,18 @@ export const App: React.FC = () => {
         setShowLanding(false); setShowNewProjectFlow(false); setIsBackendMenuOpen(false); localStorage.setItem('last_active_project_id', newId); setIsInitializing(false);
     };
 
-    const setActivePage = (index: number) => {
-        setAppState(prev => { const newHist = [...prev.history]; newHist[prev.index] = { ...newHist[prev.index], activePageIndex: index }; return { ...prev, history: newHist }; });
-        setTimeout(() => setSelectedIds([]), 0);
-    };
+    const setActivePage = useCallback((index: number, newSelection?: string[]) => {
+        setAppState(prev => {
+            const newHist = [...prev.history];
+            newHist[prev.index] = { ...newHist[prev.index], activePageIndex: index };
+            return { ...prev, history: newHist };
+        });
+        if (newSelection) {
+            setSelectedIds(newSelection);
+        } else {
+            setSelectedIds([]);
+        }
+    }, []);
     const handleDuplicatePage = (index: number) => {
         setAppState(prev => { const current = prev.history[prev.index]; const pageToClone = current.pages[index]; const newPage = deepCopy(pageToClone); newPage.id = `page-${Date.now()}`; newPage.name = `${pageToClone.name} COPY`; const newPages = [...current.pages]; newPages.splice(index + 1, 0, newPage); const newState = { ...current, pages: newPages, activePageIndex: index + 1 }; const newHist = [...prev.history.slice(0, prev.index + 1), newState]; return { history: newHist, index: newHist.length - 1 }; });
         setTimeout(() => setSelectedIds([]), 0);
@@ -454,7 +464,17 @@ export const App: React.FC = () => {
             setDeleteConfirmId(targetId);
         }
     };
-    const handleRenamePage = (index: number, newName: string) => { setAppState(prev => { const current = prev.history[prev.index]; const newPages = [...current.pages]; newPages[index] = { ...newPages[index], name: newName.toUpperCase() }; const newState = { ...current, pages: newPages }; const newHistoryUpdate = [...prev.history]; newHistoryUpdate[prev.index] = newState; return { ...prev, history: newHistoryUpdate }; }); };
+    const handleRenamePage = useCallback((index: number, newName: string) => {
+        setAppState(prev => {
+            const current = prev.history[prev.index];
+            const newPages = [...current.pages];
+            newPages[index] = { ...newPages[index], name: newName.toUpperCase() };
+            const newState = { ...current, pages: newPages };
+            const newHistoryUpdate = [...prev.history];
+            newHistoryUpdate[prev.index] = newState;
+            return { ...prev, history: newHistoryUpdate };
+        });
+    }, []);
 
     const deleteConfirmIcon = <AlertTriangle size={12} />;
 
@@ -551,7 +571,11 @@ export const App: React.FC = () => {
         }, true);
     }, [clipboard, setConfig]);
 
-    const handleSelection = (id: string | string[] | null, multi = false) => { if (!id) { setSelectedIds([]); return; } if (Array.isArray(id)) { setSelectedIds(id); return; } setSelectedIds(prev => multi ? (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]) : [id]); };
+    const handleSelection = useCallback((id: string | string[] | null, multi = false) => {
+        if (!id) { setSelectedIds([]); return; }
+        if (Array.isArray(id)) { setSelectedIds(id); return; }
+        setSelectedIds(prev => multi ? (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]) : [id]);
+    }, []);
     const deleteSelectedLayers = useCallback(() => {
         if (selectedIds.length === 0) return;
         setConfig(prev => {
@@ -697,7 +721,7 @@ export const App: React.FC = () => {
         }, false);
     }, [setConfig]);
 
-    const handleAlign = (type: string) => {
+    const handleAlign = useCallback((type: string) => {
         if (selectedIds.length === 0) return;
         setConfig(prev => {
             const next = deepCopy(prev); const canvasW = next.canvas.width; const canvasH = next.canvas.height;
@@ -717,7 +741,7 @@ export const App: React.FC = () => {
                 else { if (type === 'left') l.position_x = 0; if (type === 'right') l.position_x = canvasW - l.width; if (type === 'top') l.position_y = 0; if (type === 'bottom') l.position_y = canvasH - l.height; if (type === 'center') l.position_x = (canvasW / 2) - (l.width / 2); if (type === 'middle') l.position_y = (canvasH / 2) - (l.height / 2); }
             }); return next;
         }, true);
-    };
+    }, [selectedIds, setConfig]);
 
 
     useEffect(() => {
@@ -879,6 +903,44 @@ export const App: React.FC = () => {
     };
 
     const handleDuplicateSelectedLayers = () => { /* Logic already handled via copy/paste but can be expanded */ };
+
+
+    const handleCanvasUpdate = useCallback((pageId: string, update: any, save: boolean) => {
+        setAppState(prev => {
+            const current = prev.history[prev.index];
+            const targetIdx = current.pages.findIndex(p => p.id === pageId);
+            if (targetIdx === -1) return prev;
+
+            const newPages = [...current.pages];
+            const oldConfig = newPages[targetIdx];
+            // Safe merge if update is an object, otherwise use as function
+            const updatedConfig = typeof update === 'function' ? update(oldConfig) : { ...oldConfig, ...update };
+            const newConfig = repairConfig(updatedConfig);
+            newPages[targetIdx] = newConfig;
+
+            const nState = { ...current, pages: newPages };
+
+            if (save) {
+                const nHist = prev.history.slice(0, prev.index + 1);
+                nHist.push(deepCopy(nState));
+                if (nHist.length > 30) nHist.shift();
+                return { history: nHist, index: nHist.length - 1 };
+            } else {
+                const nHist = [...prev.history];
+                nHist[prev.index] = nState;
+                return { ...prev, history: nHist };
+            }
+        });
+    }, []);
+
+    const handleCanvasSelectDirect = useCallback((pageIndex: number, id: string | string[] | null, multi: boolean) => {
+        if (currentState.activePageIndex !== pageIndex) {
+            const newSelection = !id ? [] : (Array.isArray(id) ? id : [id]);
+            setActivePage(pageIndex, newSelection);
+        } else {
+            handleSelection(id, multi);
+        }
+    }, [currentState.activePageIndex, setActivePage, handleSelection]);
 
 
     if (isInitializing) return <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white"><Loader2 className="animate-spin mb-4" size={40} /><span className="text-[10px] font-black uppercase tracking-[0.3em]">Memulihkan Sesi Neural...</span></div>;
@@ -1066,33 +1128,9 @@ export const App: React.FC = () => {
                                                     domId={`canvas-export-${pageConfig.id}`}
                                                     config={pageConfig}
                                                     scale={zoom}
-                                                    onUpdate={(update, save) => {
-                                                        setAppState(prev => {
-                                                            const current = prev.history[prev.index];
-                                                            const targetIdx = current.pages.findIndex(p => p.id === pageConfig.id);
-                                                            if (targetIdx === -1) return prev;
-
-                                                            const newPages = [...current.pages];
-                                                            const oldConfig = newPages[targetIdx];
-                                                            const newConfig = repairConfig(typeof update === 'function' ? update(oldConfig) : update);
-                                                            newPages[targetIdx] = newConfig;
-
-                                                            const nState = { ...current, pages: newPages };
-
-                                                            if (save) {
-                                                                const nHist = prev.history.slice(0, prev.index + 1);
-                                                                nHist.push(deepCopy(nState));
-                                                                if (nHist.length > 30) nHist.shift();
-                                                                return { history: nHist, index: nHist.length - 1 };
-                                                            } else {
-                                                                const nHist = [...prev.history];
-                                                                nHist[prev.index] = nState;
-                                                                return { ...prev, history: nHist };
-                                                            }
-                                                        });
-                                                    }}
+                                                    onUpdate={(update, save) => handleCanvasUpdate(pageConfig.id, update, save)}
                                                     selectedIds={isActive ? selectedIds : []}
-                                                    onSelect={(id, multi) => { if (!isActive) setActivePage(pageIndex); handleSelection(id, multi); }}
+                                                    onSelect={(id, multi) => handleCanvasSelectDirect(pageIndex, id, multi)}
                                                     readOnly={false}
                                                     isActive={isActive}
                                                     handToolActive={penToolMode === 'hand' || isSpacePressed}

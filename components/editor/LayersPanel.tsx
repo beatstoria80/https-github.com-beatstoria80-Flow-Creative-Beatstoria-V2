@@ -271,7 +271,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
             return { name: shp.name || `VEC_${shp.shape_type.toUpperCase()}`, type: 'shape', icon: <Shapes size={14} />, hidden: shp.hidden, locked: shp.locked, system: false, group };
         }
 
-        return { name: 'UNKNOWN NODE', type: 'unknown', icon: <Fingerprint size={14} />, hidden: false, locked: false, system: false, group };
+        // --- ADDED GROUP CHECK ---
+        const isGroup = config.groups?.find(g => g.id === id);
+        if (isGroup) {
+            return { name: isGroup.name, type: 'group', icon: <Combine size={14} />, hidden: isGroup.hidden, locked: isGroup.locked, system: false, group: isGroup };
+        }
+
+        return { name: 'UNKNOWN NODE', type: 'unknown', icon: <Fingerprint size={14} />, hidden: false, locked: false, system: false, group: null };
     }, [config.groups, config.canvas, config.image_layers, config.additional_texts, config.shapes]);
 
 
@@ -393,9 +399,9 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
                                                     type="text"
                                                     value={editName}
                                                     onChange={(e) => setEditName(e.target.value)}
-                                                    onBlur={() => { handleRenamePage(index, editName); setEditingLayerId(null); }}
+                                                    onBlur={() => { onRenamePage(index, editName); setEditingLayerId(null); }}
                                                     onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') { handleRenamePage(index, editName); setEditingLayerId(null); }
+                                                        if (e.key === 'Enter') { onRenamePage(index, editName); setEditingLayerId(null); }
                                                         if (e.key === 'Escape') setEditingLayerId(null);
                                                         e.stopPropagation();
                                                     }}
@@ -440,113 +446,29 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
                         const isEditing = editingLayerId === id;
 
                         // --- ROBUST GROUP LOGIC ---
-                        const group = data.group;
-                        let renderGroupHeader = false;
+                        if (data.type === 'group') {
+                            const group = data.group!;
+                            if (renderedGroups.current.has(group.id)) return null;
+                            renderedGroups.current.add(group.id);
 
-                        if (group) {
-                            if (!renderedGroups.current.has(group.id)) {
-                                renderedGroups.current.add(group.id);
-                                renderGroupHeader = true;
-                            }
-                        }
-
-                        if (renderGroupHeader && group) {
                             const isGroupSelected = group.layerIds.every(lid => selectedIds.includes(lid));
                             const isGroupEditing = editingLayerId === group.id;
 
-                            const header = (
-                                <div
-                                    key={`group-header-${group.id}`}
-                                    onClick={() => selectGroup(group.id, group.layerIds)}
-                                    className={`group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 cursor-pointer mb-2 ${isGroupSelected
-                                        ? 'bg-purple-600 border-purple-500 text-white shadow-lg'
-                                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-white/20`}>
-                                            <Combine size={14} className={isGroupSelected ? "text-white" : "text-purple-600"} />
-                                        </div>
-                                        <div className="flex flex-col overflow-hidden w-full mr-2" onDoubleClick={(e) => startEditing(group.id, group.name, e)}>
-                                            {isGroupEditing ? (
-                                                <input
-                                                    autoFocus
-                                                    type="text"
-                                                    value={editName}
-                                                    onChange={(e) => setEditName(e.target.value)}
-                                                    onBlur={saveEditing}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') saveEditing();
-                                                        if (e.key === 'Escape') setEditingLayerId(null);
-                                                        e.stopPropagation();
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="w-full max-w-[140px] bg-white text-slate-900 text-[10px] font-bold px-1 py-0.5 rounded border border-purple-300 outline-none focus:ring-2 focus:ring-purple-500/20 uppercase tracking-widest"
-                                                />
-                                            ) : (
-                                                <span className="text-[10px] font-black uppercase tracking-widest truncate" title="Double click to rename group">{group.name}</span>
-                                            )}
-                                            <span className="text-[7px] font-bold opacity-70 uppercase tracking-wide">{group.layerIds.length} LAYERS MERGED</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-1">
-                                        {/* Group Controls - ALWAYS VISIBLE with adaptive styling */}
-                                        <div className="flex items-center gap-0.5">
-                                            <button
-                                                onClick={(e) => toggleGroupVisibility(group.id, e)}
-                                                className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}
-                                                title={group.hidden ? "Unhide Group" : "Hide Group"}
-                                            >
-                                                {group.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                                            </button>
-                                            <button
-                                                onClick={(e) => toggleGroupLock(group.id, e)}
-                                                className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}
-                                                title={group.locked ? "Unlock Group" : "Lock Group"}
-                                            >
-                                                {group.locked ? <Lock size={14} /> : <Unlock size={14} />}
-                                            </button>
-                                            {/* GROUP DELETE BUTTON - TRASH UI */}
-                                            <DeleteConfirmButton
-                                                onDelete={() => deleteGroup(group.id)}
-                                                className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-red-100 text-slate-400 hover:text-red-500'}`}
-                                                title="Delete Group"
-                                            />
-                                        </div>
-
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); toggleGroupCollapse(group.id); }}
-                                            className={`p-1 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400'}`}
-                                        >
-                                            <ChevronDown size={14} className={`transition-transform duration-200 ${group.collapsed ? 'rotate-180' : 'rotate-0'}`} />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-
-                            if (group.collapsed) {
-                                return header;
-                            }
-
                             return (
-                                <React.Fragment key={`group-frag-${group.id}`}>
-                                    {header}
-                                    {/* Render current item below header */}
+                                <React.Fragment key={`group-full-${group.id}`}>
                                     <div
-                                        onClick={(e) => handleLayerClick(id, e)}
-                                        className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer ml-3 border-l-2 border-l-purple-300 ${isSelected
-                                            ? 'bg-[#1a1c23] border-[#2d323e] text-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] z-10 scale-[1.01]'
-                                            : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-slate-50'
+                                        onClick={() => selectGroup(group.id, group.layerIds)}
+                                        className={`group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 cursor-pointer mb-2 ${isGroupSelected
+                                            ? 'bg-purple-600 border-purple-500 text-white shadow-lg'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                                             }`}
                                     >
-                                        <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'
-                                                }`}>
-                                                {data.icon}
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-white/20`}>
+                                                <Combine size={14} className={isGroupSelected ? "text-white" : "text-purple-600"} />
                                             </div>
-                                            <div className="flex flex-col overflow-hidden w-full mr-2" onDoubleClick={(e) => startEditing(id, data.name, e)}>
-                                                {isEditing ? (
+                                            <div className="flex flex-col overflow-hidden w-full mr-2" onDoubleClick={(e) => startEditing(group.id, group.name, e)}>
+                                                {isGroupEditing ? (
                                                     <input
                                                         autoFocus
                                                         type="text"
@@ -559,27 +481,65 @@ export const LayersPanel: React.FC<LayersPanelProps> = React.memo(({
                                                             e.stopPropagation();
                                                         }}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="w-full bg-white text-slate-900 text-[10px] font-bold px-1 py-0.5 rounded border border-indigo-300 outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase tracking-widest"
+                                                        className="w-full max-w-[140px] bg-white text-slate-900 text-[10px] font-bold px-1 py-0.5 rounded border border-purple-300 outline-none focus:ring-2 focus:ring-purple-500/20 uppercase tracking-widest"
                                                     />
                                                 ) : (
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isSelected ? 'text-white' : 'text-slate-800'}`} title="Double click to rename">
-                                                        {data.name}
-                                                    </span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest truncate" title="Double click to rename group">{group.name}</span>
                                                 )}
+                                                <span className="text-[7px] font-bold opacity-70 uppercase tracking-wide">{group.layerIds.length} LAYERS MERGED</span>
                                             </div>
                                         </div>
-                                        <div className={`flex items-center gap-0.5 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity shrink-0`}>
-                                            <button onClick={(e) => toggleVisibility(id, e)} className={`p-2 rounded-lg transition-colors ${isSelected ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}>{data.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
-                                            <button onClick={(e) => toggleLock(id, e)} className={`p-2 rounded-lg transition-all ${data.locked ? 'text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 shadow-sm' : (isSelected ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600')}`} title={data.locked ? "Unlock Layer" : "Lock Layer"}>{data.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
+
+                                        <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-0.5">
+                                                <button onClick={(e) => toggleGroupVisibility(group.id, e)} className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}>{group.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                <button onClick={(e) => toggleGroupLock(group.id, e)} className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}>{group.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
+                                                <DeleteConfirmButton onDelete={() => deleteGroup(group.id)} className={`p-1.5 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-red-100 text-slate-400 hover:text-red-500'}`} />
+                                            </div>
+                                            <button onClick={(e) => { e.stopPropagation(); toggleGroupCollapse(group.id); }} className={`p-1 rounded transition-colors ${isGroupSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-400'}`}>
+                                                <ChevronDown size={14} className={`transition-transform duration-200 ${group.collapsed ? 'rotate-180' : 'rotate-0'}`} />
+                                            </button>
                                         </div>
                                     </div>
+
+                                    {!group.collapsed && group.layerIds.map(lid => {
+                                        const lData = getLayerData(lid);
+                                        const isLSelected = selectedIds.includes(lid);
+                                        const isLEditing = editingLayerId === lid;
+                                        return (
+                                            <div
+                                                key={`child-${lid}`}
+                                                onClick={(e) => handleLayerClick(lid, e)}
+                                                className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer ml-3 border-l-2 border-l-purple-300 mb-1 ${isLSelected
+                                                    ? 'bg-[#1a1c23] border-[#2d323e] text-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] z-10 scale-[1.01]'
+                                                    : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                {/* Child Layer Content (Icon, Name, Controls) */}
+                                                <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${isLSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>{lData.icon}</div>
+                                                    <div className="flex flex-col overflow-hidden w-full mr-2" onDoubleClick={(e) => startEditing(lid, lData.name, e)}>
+                                                        {isLEditing ? (
+                                                            <input autoFocus type="text" value={editName} onChange={(e) => setEditName(e.target.value)} onBlur={saveEditing} onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') setEditingLayerId(null); e.stopPropagation(); }} onClick={(e) => e.stopPropagation()} className="w-full bg-white text-slate-900 text-[10px] font-bold px-1 py-0.5 rounded border border-indigo-300 outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase tracking-widest" />
+                                                        ) : (
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isLSelected ? 'text-white' : 'text-slate-800'}`}>{lData.name}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className={`flex items-center gap-0.5 ${isLSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity shrink-0`}>
+                                                    <button onClick={(e) => toggleVisibility(lid, e)} className={`p-2 rounded-lg transition-colors ${isLSelected ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}>{lData.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                    <button onClick={(e) => toggleLock(lid, e)} className={`p-2 rounded-lg transition-all ${lData.locked ? 'text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 shadow-sm' : (isLSelected ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600')}`}>{lData.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
+                                                    {isLSelected && <DeleteConfirmButton onDelete={() => deleteLayer(lid)} className="p-2 rounded-lg transition-colors bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white" />}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </React.Fragment>
                             );
                         }
 
-                        if (group && group.collapsed) {
-                            return null;
-                        }
+                        // If it's a layer that belongs to a group, SKIP it here (it's rendered by the group entry above)
+                        if (data.group) return null;
 
                         return (
                             <div
