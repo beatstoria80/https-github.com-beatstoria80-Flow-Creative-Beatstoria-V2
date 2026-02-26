@@ -43,4 +43,17 @@ root.render(
     <App />
   </React.StrictMode>
 );
+// REGISTER SERVICE WORKER FOR OFFLINE PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('NEURAL BOOT: ServiceWorker registered with scope: ', registration.scope);
+      })
+      .catch(err => {
+        console.error('NEURAL ERROR: ServiceWorker registration failed: ', err);
+      });
+  });
+}
+
 console.log("NEURAL BOOT: Render call completed.");

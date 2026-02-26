@@ -173,6 +173,7 @@ export const App: React.FC = () => {
     const [showLanding, setShowLanding] = useState(true);
     const [isInitializing, setIsInitializing] = useState(true);
     const [currentProjectId, setCurrentProjectId] = useState<string>(() => localStorage.getItem('last_active_project_id') || 'page-default');
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     const [theme, setTheme] = useState<'dark' | 'light'>(() => {
         return (localStorage.getItem('space_studio_theme') as 'dark' | 'light') || 'light';
@@ -250,6 +251,17 @@ export const App: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('space_studio_theme', theme);
     }, [theme]);
+
+    useEffect(() => {
+        const handleOnline = () => { setIsOnline(true); showToast("NEURAL HUB CONNECTED"); };
+        const handleOffline = () => { setIsOnline(false); showToast("OFFLINE MODE ACTIVATED"); };
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     // CRITICAL AUTO-SAVE: Debounced save to IndexedDB whenever appState changes.
     // Without this, all layer changes (new elements, etc.) are LOST on page refresh
@@ -1270,10 +1282,10 @@ export const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {isTypefaceStudioOpen && <NeuralTypefaceStudio isOpen={isTypefaceStudioOpen} onClose={() => setIsTypefaceStudioOpen(false)} onApply={handleApplyToCanvas} targetLayer={selectedTextLayer} />}
-                    {isPurgeOpen && <NeuralPurgeStudio isOpen={isPurgeOpen} onClose={() => setIsPurgeOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} library={activePageConfig.stash} onOpenCooking={() => { setIsPurgeOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsPurgeOpen(false); setIsTitanFillOpen(true); }} onOpenRetouch={() => { setIsPurgeOpen(false); setIsRetouchOpen(true); }} onOpenStory={() => { setIsPurgeOpen(false); setIsStoryOpen(true); }} />}
-                    {isUpscaleOpen && <NanoBananaStudio isOpen={isUpscaleOpen} onClose={() => setIsUpscaleOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
-                    {isStoryOpen && <StoryCampaignFlow isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsStoryOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsStoryOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsStoryOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsStoryOpen(false); setIsRetouchOpen(true); }} />}
+                    {isTypefaceStudioOpen && <NeuralTypefaceStudio isOpen={isTypefaceStudioOpen} onClose={() => setIsTypefaceStudioOpen(false)} onApply={handleApplyToCanvas} targetLayer={selectedTextLayer} isOnline={isOnline} />}
+                    {isPurgeOpen && <NeuralPurgeStudio isOpen={isPurgeOpen} onClose={() => setIsPurgeOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} library={activePageConfig.stash} onOpenCooking={() => { setIsPurgeOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsPurgeOpen(false); setIsTitanFillOpen(true); }} onOpenRetouch={() => { setIsPurgeOpen(false); setIsRetouchOpen(true); }} onOpenStory={() => { setIsPurgeOpen(false); setIsStoryOpen(true); }} isOnline={isOnline} />}
+                    {isUpscaleOpen && <NanoBananaStudio isOpen={isUpscaleOpen} onClose={() => setIsUpscaleOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} isOnline={isOnline} />}
+                    {isStoryOpen && <StoryCampaignFlow isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsStoryOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsStoryOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsStoryOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsStoryOpen(false); setIsRetouchOpen(true); }} isOnline={isOnline} />}
                     {isGenOpen && (
                         <NanoBananaGen
                             isOpen={isGenOpen}
@@ -1299,12 +1311,13 @@ export const App: React.FC = () => {
                             onOpenPodcast={() => { setIsGenOpen(false); setIsPodcastStudioOpen(true); }}
                             sessionHistory={genHistory}
                             setSessionHistory={setGenHistory}
+                            isOnline={isOnline}
                         />
                     )}
-                    {isRetouchOpen && <NeuralRetouchStudio isOpen={isRetouchOpen} onClose={() => setIsRetouchOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsRetouchOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsRetouchOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsRetouchOpen(false); setIsPurgeOpen(true); }} />}
-                    {isTitanFillOpen && <TitanFillStudio isOpen={isTitanFillOpen} onClose={() => setIsTitanFillOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsTitanFillOpen(false); setIsGenOpen(true); }} onOpenPurgeBg={() => { setIsTitanFillOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsTitanFillOpen(false); setIsRetouchOpen(true); }} />}
-                    {isCineOpen && <VeoCineStudio isOpen={isCineOpen} onClose={() => setIsCineOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} />}
-                    {isNoteLMOpen && <NoteLMStudio isOpen={isNoteLMOpen} onClose={() => setIsNoteLMOpen(false)} onOpenCooking={() => { setIsNoteLMOpen(false); setIsGenOpen(true); }} onApplyVisual={handleApplyToCanvas} onOpenVoiceStudio={() => { setIsNoteLMOpen(false); setIsVoiceStudioOpen(true); }} />}
+                    {isRetouchOpen && <NeuralRetouchStudio isOpen={isRetouchOpen} onClose={() => setIsRetouchOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsRetouchOpen(false); setIsGenOpen(true); }} onOpenTitanFill={() => { setIsRetouchOpen(false); setIsTitanFillOpen(true); }} onOpenPurgeBg={() => { setIsRetouchOpen(false); setIsPurgeOpen(true); }} isOnline={isOnline} />}
+                    {isTitanFillOpen && <TitanFillStudio isOpen={isTitanFillOpen} onClose={() => setIsTitanFillOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} onOpenCooking={() => { setIsTitanFillOpen(false); setIsGenOpen(true); }} onOpenPurgeBg={() => { setIsTitanFillOpen(false); setIsPurgeOpen(true); }} onOpenRetouch={() => { setIsTitanFillOpen(false); setIsRetouchOpen(true); }} isOnline={isOnline} />}
+                    {isCineOpen && <VeoCineStudio isOpen={isCineOpen} onClose={() => setIsCineOpen(false)} onApply={handleApplyToCanvas} onStash={handleStashResult} initialImage={activeHubContext} isOnline={isOnline} />}
+                    {isNoteLMOpen && <NoteLMStudio isOpen={isNoteLMOpen} onClose={() => setIsNoteLMOpen(false)} onOpenCooking={() => { setIsNoteLMOpen(false); setIsGenOpen(true); }} onApplyVisual={handleApplyToCanvas} onOpenVoiceStudio={() => { setIsNoteLMOpen(false); setIsVoiceStudioOpen(true); }} isOnline={isOnline} />}
                     {isVoiceStudioOpen && (
                         <VoiceStudio
                             isOpen={isVoiceStudioOpen}
@@ -1314,6 +1327,7 @@ export const App: React.FC = () => {
                             onOpenPurgeBg={() => { setIsVoiceStudioOpen(false); setIsPurgeOpen(true); }}
                             onOpenRetouch={() => { setIsVoiceStudioOpen(false); setIsRetouchOpen(true); }}
                             onOpenStory={() => { setIsVoiceStudioOpen(false); setIsStoryOpen(true); }}
+                            isOnline={isOnline}
                         />
                     )}
 
@@ -1324,6 +1338,7 @@ export const App: React.FC = () => {
                             onApply={handleApplyToCanvas}
                             onStash={handleStashResult}
                             initialImage={activeHubContext}
+                            isOnline={isOnline}
                         />
                     )}
 
@@ -1333,6 +1348,7 @@ export const App: React.FC = () => {
                             onClose={() => setIsSpaceCampaignOpen(false)}
                             onApply={handleApplyToCanvas}
                             onStash={handleStashResult}
+                            isOnline={isOnline}
                         />
                     )}
 
@@ -1343,6 +1359,7 @@ export const App: React.FC = () => {
                             onApply={handleApplyToCanvas}
                             onStash={handleStashResult}
                             initialImage={activeHubContext}
+                            isOnline={isOnline}
                         />
                     )}
 

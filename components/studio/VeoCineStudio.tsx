@@ -19,6 +19,7 @@ interface VeoCineStudioProps {
   onApply: (src: string) => void;
   onStash: (src: string) => void;
   initialImage?: string | null;
+  isOnline?: boolean;
 }
 
 interface VideoClip {
@@ -40,7 +41,7 @@ const LOADING_MESSAGES = [
   "Finalizing Ultra-HD Export..."
 ];
 
-export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, onApply, onStash, initialImage }) => {
+export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, onApply, onStash, initialImage, isOnline = true }) => {
   const [clips, setClips] = useState<VideoClip[]>([]);
   const [activeClipId, setActiveClipId] = useState<string | null>(null);
   const [masterStory, setMasterStory] = useState("");
@@ -76,6 +77,10 @@ export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, o
   };
 
   const handleAutoScript = async () => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR SCRIPTING");
+      return;
+    }
     if (!masterStory.trim()) return;
     setIsScripting(true);
     try {
@@ -101,6 +106,10 @@ export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, o
   };
 
   const generateClip = async (clipId: string, extensionMode: boolean = false) => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR RENDERING");
+      return;
+    }
     const clip = clips.find(c => c.id === clipId);
     if (!clip || !hasKey) return null;
 
@@ -180,6 +189,10 @@ export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, o
   };
 
   const renderFullFilm = async () => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR PRODUCTION");
+      return;
+    }
     if (isProcessingBatch) return;
     setIsProcessingBatch(true);
     try {

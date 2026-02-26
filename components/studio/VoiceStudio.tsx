@@ -69,6 +69,7 @@ interface VoiceStudioProps {
     onOpenPurgeBg?: () => void;
     onOpenRetouch?: () => void;
     onOpenStory?: () => void;
+    isOnline?: boolean;
 }
 
 type GeminiVoice = 'Puck' | 'Kore' | 'Zephyr' | 'Charon' | 'Fenrir';
@@ -491,7 +492,14 @@ const WRITING_STYLES = [
 ];
 
 export const VoiceStudio: React.FC<VoiceStudioProps> = ({
-    isOpen, onClose, onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch, onOpenStory
+    isOpen,
+    onClose,
+    onOpenCooking,
+    onOpenTitanFill,
+    onOpenPurgeBg,
+    onOpenRetouch,
+    onOpenStory,
+    isOnline = true
 }) => {
     const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('space_studio_theme') as any) || 'dark');
     const isDark = theme === 'dark';
@@ -878,10 +886,12 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         setScript(prev => prev.map((l, i) => i === index ? { ...l, isGenerating: true } : l));
         const style = VOICE_STYLES.find(s => s.id === spk!.styleId);
         const selectedVoice = spk.gender === 'male' ? (style?.maleVoice || 'Puck') : (style?.femaleVoice || 'Kore');
+        if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR SYNTHESIS"); return null; }
         try {
             const ai = new GoogleGenAI({ apiKey: getApiKey() });
             const response = await ai.models.generateContent({ model: "gemini-1.5-flash", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
-            const base64Audio = response.candidates?.[0]?.content?.parts[0]?.inlineData?.data;
+            const candidate = response.candidates?.[0];
+            const base64Audio = candidate?.content?.parts?.[0]?.inlineData?.data;
             if (base64Audio) {
                 const ctx = getSafeAudioContext(); const buffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
                 setScript(prev => { const n = [...prev]; if (n[index]) n[index] = { ...n[index], audioBuffer: buffer, duration: buffer.duration, isGenerating: false }; return n; });
@@ -893,6 +903,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
 
     const handleLinkIngestion = async () => {
         if (!urlInput.trim() || isIngestingLink) return;
+        if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR LINKS"); return; }
         setIsIngestingLink(true);
         const id = `web-${Date.now()}`;
         const cleanUrl = urlInput.trim();
@@ -928,6 +939,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
             showToast("INPUT REQUIRED FOR GENERATION");
             return { script: [], sessionId: null };
         }
+        if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR GENERATION"); return { script: [], sessionId: null }; }
         setIsScripting(true); setScript([]); setResearchLabel("SINTESIS NEURAL AKTIF..."); handleStopPlayback();
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         try {
@@ -1011,6 +1023,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         const queue = activeScript.map((line, index) => ({ line, index })).filter(item => !item.line.audioBuffer);
         if (queue.length === 0) { handleStartFullSequence(); return; }
+        if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR AUDIO SYNTHESIS"); return; }
         setIsGeneratingBatch(true); setBatchProgress(0); handleStopPlayback(true);
         let completed = 0;
         try {
@@ -1170,6 +1183,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
 
         // If no script exists, we just set the style for future generation
         if (script.length === 0) return;
+        if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR ENHANCEMENT"); return; }
 
         setIsEnhancing(true);
         const styleObj = SCRIPT_STYLES.find(s => s.id === styleId);
@@ -1225,6 +1239,10 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                 try {
                     let content = "";
                     if (type === 'image') {
+                        if (!isOnline) {
+                            showToast("ONLINE CONNECTION REQUIRED FOR IMAGE OCR");
+                            throw new Error("Offline");
+                        }
                         const base64 = await fileToBase64(file);
                         const visionResponse: any = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: { parts: [{ inlineData: { data: base64.split(',')[1], mimeType: file.type } }, { text: "Extract text." }] } });
                         content = visionResponse.text || "";
@@ -1367,11 +1385,11 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleBatchGenerate}
-                                    disabled={isGeneratingBatch || isScripting}
-                                    className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg disabled:opacity-30 ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+                                    disabled={isGeneratingBatch || isScripting || (!isOnline && !isAllAudioReady)}
+                                    className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg disabled:opacity-30 ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : (isOnline ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-500')} text-white`}
                                 >
-                                    {isGeneratingBatch || isScripting ? <Loader2 size={12} className="animate-spin" /> : isAllAudioReady ? <Play size={12} /> : (script.length > 0 ? <Volume2 size={12} /> : <Scan size={12} />)}
-                                    {isGeneratingBatch || isScripting ? 'PROCESSING...' : isAllAudioReady ? 'PLAY SEQUENCE' : (script.length > 0 ? 'GENERATE AUDIO' : 'GENERATE SCRIPT')}
+                                    {isGeneratingBatch || isScripting ? <Loader2 size={12} className="animate-spin" /> : (!isOnline && !isAllAudioReady ? <CircleOff size={12} /> : (isAllAudioReady ? <Play size={12} /> : (script.length > 0 ? <Volume2 size={12} /> : <Scan size={12} />)))}
+                                    {isGeneratingBatch || isScripting ? 'PROCESSING...' : (!isOnline && !isAllAudioReady ? 'OFFLINE' : (isAllAudioReady ? 'PLAY SEQUENCE' : (script.length > 0 ? 'GENERATE AUDIO' : 'GENERATE SCRIPT')))}
                                 </button>
                             </div>
                         </div>
@@ -1763,7 +1781,24 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
                             )}
                         </div>
 
-                        <button onClick={handleBatchGenerate} disabled={isScripting || isGeneratingBatch} className={`h-[120px] w-[140px] text-white rounded-3xl flex flex-col items-center justify-center gap-2 shadow-2xl duration-500 active:scale-95 shrink-0 disabled:opacity-30 disabled:grayscale ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-50'}`}>{isGeneratingBatch || isScripting ? <Loader2 size={24} className="animate-spin" /> : isAllAudioReady ? <Play size={24} /> : <Scan size={24} />}<span className="font-black uppercase tracking-widest text-[9px] text-center leading-tight">{isGeneratingBatch || isScripting ? 'PROCESSING...' : isAllAudioReady ? 'PLAY\nSEQUENCE' : (script.length > 0 ? 'GENERATE\nAUDIO' : 'GENERATE\nSCRIPT')}</span></button>
+                        <button
+                            onClick={handleBatchGenerate}
+                            disabled={isScripting || isGeneratingBatch || (!isOnline && !isAllAudioReady)}
+                            className={`h-[120px] w-[140px] text-white rounded-3xl flex flex-col items-center justify-center gap-2 shadow-2xl transition-all duration-500 active:scale-95 shrink-0 disabled:opacity-30 disabled:grayscale ${isAllAudioReady ? 'bg-green-600 hover:bg-green-700' : (isOnline ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-500')}`}
+                        >
+                            {isGeneratingBatch || isScripting ? (
+                                <Loader2 size={24} className="animate-spin" />
+                            ) : !isOnline && !isAllAudioReady ? (
+                                <CircleOff size={24} />
+                            ) : isAllAudioReady ? (
+                                <Play size={24} />
+                            ) : (
+                                <Scan size={24} />
+                            )}
+                            <span className="font-black uppercase tracking-widest text-[9px] text-center leading-tight">
+                                {isGeneratingBatch || isScripting ? 'PROCESSING...' : (!isOnline && !isAllAudioReady ? 'OFFLINE' : (isAllAudioReady ? 'PLAY\nSEQUENCE' : (script.length > 0 ? 'GENERATE\nAUDIO' : 'GENERATE\nSCRIPT')))}
+                            </span>
+                        </button>
                     </div>
                 </div>
             </footer>

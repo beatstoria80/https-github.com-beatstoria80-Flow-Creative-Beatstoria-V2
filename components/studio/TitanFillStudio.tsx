@@ -20,11 +20,12 @@ interface TitanFillStudioProps {
   onOpenCooking?: () => void;
   onOpenPurgeBg?: () => void;
   onOpenRetouch?: () => void;
+  isOnline?: boolean;
 }
 
 export const TitanFillStudio: React.FC<TitanFillStudioProps> = ({
   isOpen, onClose, onApply, onStash, initialImage,
-  onOpenCooking, onOpenPurgeBg, onOpenRetouch
+  onOpenCooking, onOpenPurgeBg, onOpenRetouch, isOnline = true
 }) => {
   const [sourceImage, setSourceImage] = useState<string | null>(initialImage || null);
   const [prompt, setPrompt] = useState("");
@@ -171,12 +172,20 @@ export const TitanFillStudio: React.FC<TitanFillStudioProps> = ({
   const handleMouseUp = () => { setIsDrawing(false); setIsPanning(false); };
 
   const handleRefinePrompt = async () => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR REFINEMENT");
+      return;
+    }
     if (!prompt.trim()) return;
     setIsRefining(true);
     try { const expanded = await expandPrompt(`Perjelas instruksi inpainting ini menjadi detail kontekstual tingkat tinggi: "${prompt}"`); setPrompt(expanded); } catch (e) { console.error(e); } finally { setIsRefining(false); }
   };
 
   const executeFill = async () => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR GENERATION");
+      return;
+    }
     if (!sourceImage || !maskCanvasRef.current || !prompt.trim() || !hasMaskContent) return;
     setIsProcessing(true);
     try {

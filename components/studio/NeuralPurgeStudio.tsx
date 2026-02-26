@@ -17,11 +17,12 @@ interface NeuralPurgeStudioProps {
   onOpenRetouch?: () => void;
   // Added onOpenStory to fix type mismatch error in App components
   onOpenStory?: () => void;
+  isOnline?: boolean;
 }
 
 export const NeuralPurgeStudio: React.FC<NeuralPurgeStudioProps> = ({
   isOpen, onClose, onApply, onStash, initialImage, library,
-  onOpenCooking, onOpenTitanFill, onOpenRetouch
+  onOpenCooking, onOpenTitanFill, onOpenRetouch, isOnline = true
 }) => {
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -71,6 +72,10 @@ export const NeuralPurgeStudio: React.FC<NeuralPurgeStudioProps> = ({
   };
 
   const startPurge = async () => {
+    if (!isOnline) {
+      alert("ONLINE CONNECTION REQUIRED FOR PURGE");
+      return;
+    }
     if (!sourceImage) return;
     setIsProcessing(true);
     setProgress(1);
@@ -227,7 +232,7 @@ export const NeuralPurgeStudio: React.FC<NeuralPurgeStudioProps> = ({
           <div className="flex items-center gap-3">
             {!resultImage || isProcessing ? (
               <button onClick={startPurge} disabled={!sourceImage || isProcessing} className="group relative px-8 py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30 overflow-hidden">
-                <span className="relative z-10 flex items-center gap-2">{isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}{isProcessing ? 'PROCESSING...' : 'INITIALIZE PURGE'}</span>
+                <span className="relative z-10 flex items-center gap-2">{isProcessing ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}{!isOnline ? 'OFFLINE' : (isProcessing ? 'PROCESSING...' : 'INITIALIZE PURGE')}</span>
               </button>
             ) : (
               <>

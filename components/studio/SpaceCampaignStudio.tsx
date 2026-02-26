@@ -79,7 +79,7 @@ interface Connection {
     target: string;
 }
 
-export const SpaceCampaignStudio: React.FC<{ isOpen: boolean; onClose: () => void; onApply: (s: string) => void; onStash: (s: string) => void; }> = ({ isOpen, onClose, onApply, onStash }) => {
+export const SpaceCampaignStudio: React.FC<{ isOpen: boolean; onClose: () => void; onApply: (s: string) => void; onStash: (s: string) => void; isOnline?: boolean; }> = ({ isOpen, onClose, onApply, onStash, isOnline = true }) => {
     const [projectName, setProjectName] = useState("NEW NEURAL CAMPAIGN");
     const [nodes, setNodes] = useState<Node[]>([
         { id: 'v1', type: 'identity', x: 100, y: 150, data: { label: 'VISUAL ANCHOR', value: '', tags: 'product utama', annotations: [], color: 'text-indigo-600', iconId: 'fingerprint' } },
@@ -238,6 +238,10 @@ export const SpaceCampaignStudio: React.FC<{ isOpen: boolean; onClose: () => voi
 
     // --- NEURAL DNA ARCHITECT: CORE PRODUCTION ENGINE (REVISED FOR POSE & IDENTITY) ---
     const executeProduction = async (overridePrompt?: string, overrideBatch?: number, isVariation = false) => {
+        if (!isOnline) {
+            setError("ONLINE CONNECTION REQUIRED FOR SYNTHESIS");
+            return;
+        }
         const generatorNode = nodes.find(n => n.type === 'generator');
         if (!generatorNode || isGenerating) return;
 
@@ -367,6 +371,10 @@ export const SpaceCampaignStudio: React.FC<{ isOpen: boolean; onClose: () => voi
     };
 
     const handleNeuralSynthesis = async () => {
+        if (!isOnline) {
+            setError("ONLINE CONNECTION REQUIRED FOR NEURAL HUB");
+            return;
+        }
         if (!aiCommand.trim() || isAiLoading) return;
         setIsAiLoading(true);
         setError(null);

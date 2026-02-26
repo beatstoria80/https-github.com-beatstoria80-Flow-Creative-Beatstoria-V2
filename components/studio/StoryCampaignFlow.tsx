@@ -33,6 +33,7 @@ interface StoryCampaignFlowProps {
     onOpenStory?: (src?: string) => void;
     onOpenVoice?: () => void;
     onOpenNoteLM?: () => void;
+    isOnline?: boolean;
 }
 
 interface SceneNode {
@@ -61,7 +62,7 @@ const RATIO_OPTIONS = [
 
 export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     isOpen, onClose, onApply, onStash, initialImage,
-    onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch, onOpenStory, onOpenVoice, onOpenNoteLM
+    onOpenCooking, onOpenTitanFill, onOpenPurgeBg, onOpenRetouch, onOpenStory, onOpenVoice, onOpenNoteLM, isOnline = true
 }) => {
     const [identityAnchor, setIdentityAnchor] = useState<string | null>(initialImage || null);
 
@@ -121,6 +122,10 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     };
 
     const handleGenerateOrbitalGrid = async () => {
+        if (!isOnline) {
+            alert("ONLINE CONNECTION REQUIRED FOR GRID SYNTHESIS");
+            return;
+        }
         if (!identityAnchor) return;
         setIsGeneratingGrid(true);
         setGridError(null);
@@ -187,6 +192,10 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     };
 
     const autoDraftSequence = async () => {
+        if (!isOnline) {
+            alert("ONLINE CONNECTION REQUIRED FOR NARRATIVE DRAFT");
+            return;
+        }
         if (!storyContext.trim()) return;
         setIsDrafting(true);
         try {
@@ -206,6 +215,10 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
     };
 
     const handleSendMessage = async (text?: string) => {
+        if (!isOnline) {
+            setChatMessages(prev => [...prev, { role: 'model', text: "ONLINE CONNECTION REQUIRED FOR ASSISTANT" }]);
+            return;
+        }
         const textToSend = text || chatInput;
         if (!textToSend.trim() && chatAttachments.length === 0) return;
         setChatMessages(prev => [...prev, { role: 'user', text: textToSend }]);

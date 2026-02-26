@@ -53,9 +53,10 @@ interface PodcastStudioProps {
     onApply: (src: string) => void;
     onStash: (src: string) => void;
     initialImage?: string | null;
+    isOnline?: boolean;
 }
 
-export const PodcastStudio: React.FC<PodcastStudioProps> = ({ isOpen, onClose, onApply, onStash, initialImage }) => {
+export const PodcastStudio: React.FC<PodcastStudioProps> = ({ isOpen, onClose, onApply, onStash, initialImage, isOnline = true }) => {
     const [selectedTemplate, setSelectedTemplate] = useState(PODCAST_TEMPLATES[0]);
     const [userFace, setUserFace] = useState<string | null>(initialImage || null);
     const [userDirective, setUserDirective] = useState("");
@@ -68,6 +69,10 @@ export const PodcastStudio: React.FC<PodcastStudioProps> = ({ isOpen, onClose, o
     if (!isOpen) return null;
 
     const handleGenerate = async () => {
+        if (!isOnline) {
+            alert("ONLINE CONNECTION REQUIRED FOR PODCAST SYNTHESIS");
+            return;
+        }
         if (!userFace) return;
         setIsGenerating(true);
         setResult(null);

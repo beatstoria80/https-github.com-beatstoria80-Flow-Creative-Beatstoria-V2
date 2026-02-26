@@ -55,6 +55,7 @@ interface NoteLMStudioProps {
     onOpenCooking: () => void;
     onApplyVisual: (src: string) => void;
     onOpenVoiceStudio: () => void;
+    isOnline?: boolean;
 }
 
 // --- GLOBAL PDF CACHE ---
@@ -1251,7 +1252,7 @@ const DocumentVisualizer: React.FC<{
     );
 };
 
-export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onOpenCooking, onApplyVisual, onOpenVoiceStudio }) => {
+export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onOpenCooking, onApplyVisual, onOpenVoiceStudio, isOnline = true }) => {
     const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('space_studio_theme') as any) || 'dark');
     const isDark = theme === 'dark';
     const [documents, setDocuments] = useState<NoteDocument[]>([]);
@@ -1415,6 +1416,11 @@ export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onO
         setChatInput("");
         setIsLoading(true);
         try {
+            if (!isOnline) {
+                setChatMessages(prev => [...prev, { role: 'model', text: "ONLINE CONNECTION REQUIRED FOR RESEARCH" }]);
+                setIsLoading(false);
+                return;
+            }
             const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
             const activeDocsList = documents.filter(d => activeDocIds.includes(d.id));
             const contextText = activeDocsList.map(d => `[FILE: ${d.title}]\n${d.content}`).join('\n\n');

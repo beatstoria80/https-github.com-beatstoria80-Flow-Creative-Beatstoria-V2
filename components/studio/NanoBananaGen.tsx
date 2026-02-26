@@ -32,7 +32,7 @@ interface NanoBananaGenProps {
     chatAttachments: { file: File, url: string }[];
     setChatAttachments: React.Dispatch<React.SetStateAction<{ file: File, url: string }[]>>;
     onOpenPurge?: (src: string) => void;
-    onOpenRetouch?: (src: string) => void;
+    onOpenRetouch?: (src?: string) => void;
     onOpenUpscale?: (src: string) => void;
     onOpenTitanFill?: (src: string) => void;
     onOpenStory?: (src: string) => void;
@@ -43,6 +43,7 @@ interface NanoBananaGenProps {
     initialImage?: string | null;
     sessionHistory?: HistoryItem[];
     setSessionHistory?: React.Dispatch<React.SetStateAction<HistoryItem[]>>;
+    isOnline?: boolean;
 }
 
 const QUANTUM_GRADES = [
@@ -64,7 +65,7 @@ export const NanoBananaGen: React.FC<NanoBananaGenProps> = ({
     isOpen, onClose, onApply, onStash, onOpenPurge, onOpenRetouch, onOpenUpscale, onOpenTitanFill,
     onOpenStory, onOpenCine, onOpenNoteLM, onOpenVoice, onOpenPodcast,
     chatMessages, onSendMessage, chatInput, setChatInput, isChatLoading, chatAttachments, setChatAttachments,
-    initialImage, sessionHistory = [], setSessionHistory
+    initialImage, sessionHistory = [], setSessionHistory, isOnline = true
 }) => {
     const [prompt, setPrompt] = useState("");
     const [aspectRatio, setAspectRatio] = useState("1:1");
@@ -112,6 +113,10 @@ export const NanoBananaGen: React.FC<NanoBananaGenProps> = ({
     }, [isOpen, initialImage]);
 
     const handleGenerate = async () => {
+        if (!isOnline) {
+            alert("ONLINE CONNECTION REQUIRED FOR GENERATION");
+            return;
+        }
         if (!prompt.trim() && anchors.length === 0) return;
         setIsGenerating(true);
         setError(null);
@@ -228,7 +233,7 @@ export const NanoBananaGen: React.FC<NanoBananaGenProps> = ({
                     <div className="mt-auto p-4 border-t border-white/5 bg-black">
                         <button onClick={handleGenerate} disabled={isGenerating} className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-[0.2em] text-xs transition-all active:scale-95 disabled:opacity-30">
                             {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <ChefHat size={18} />}
-                            {isGenerating ? 'Synthesizing...' : 'Execute Production'}
+                            {!isOnline ? 'OFFLINE' : (isGenerating ? 'Synthesizing...' : 'Execute Production')}
                         </button>
                     </div>
                 </div>
