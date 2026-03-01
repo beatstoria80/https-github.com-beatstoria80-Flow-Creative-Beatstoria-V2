@@ -9,8 +9,7 @@ import {
   Sliders, Archive, CheckCircle2, ChevronLeft, Save, FileText,
   Clapperboard, Send, Terminal, Settings2
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
-import { prepareImageForAi, generateVideoScript, ELITE_VISUAL_PROTOCOL, SKIN_INTEGRITY_PROTOCOL } from '../../services/geminiService';
+import { getAI, getActiveApiKey } from '../../services/geminiService';
 import { downloadBlob } from '../../services/exportService';
 
 interface VeoCineStudioProps {
@@ -122,7 +121,7 @@ export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, o
     }, 12000);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+      const ai = getAI();
       const validRefs = refImages.filter(Boolean);
       const referenceImagesPayload: any[] = [];
 
@@ -173,7 +172,7 @@ export const VeoCineStudio: React.FC<VeoCineStudioProps> = ({ isOpen, onClose, o
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (!downloadLink) throw new Error("No video produced");
 
-      const response = await fetch(`${downloadLink}&key=${(import.meta as any).env.VITE_API_KEY || ""}`);
+      const response = await fetch(`${downloadLink}&key=${getActiveApiKey()}`);
       const blob = await response.blob();
       const videoUrl = URL.createObjectURL(blob);
 

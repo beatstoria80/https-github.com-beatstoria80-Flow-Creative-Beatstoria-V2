@@ -12,8 +12,7 @@ import {
     File as FileIcon, Info, Edit3, Check, ShieldCheck, Lock, Shield
 } from 'lucide-react';
 import { Rnd } from 'react-rnd';
-import { GoogleGenAI, Type } from "@google/genai";
-import { generateNanoImage, analyzeVisualContext } from '../../services/geminiService';
+import { generateNanoImage, analyzeVisualContext, getAI } from '../../services/geminiService';
 import { downloadBlob } from '../../services/exportService';
 
 // --- CONSTANTS ---
@@ -379,7 +378,7 @@ export const SpaceCampaignStudio: React.FC<{ isOpen: boolean; onClose: () => voi
         setIsAiLoading(true);
         setError(null);
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const connectedNodes = edges.filter(e => e.target === 'ai-core').map(e => nodes.find(n => n.id === e.source)).filter(Boolean);
 
             // MAPPING ID ASLI KANVAS UNTUK MENCEGAH HALUSINASI ID (Seperti "REAM" atau "N-RANDOM")

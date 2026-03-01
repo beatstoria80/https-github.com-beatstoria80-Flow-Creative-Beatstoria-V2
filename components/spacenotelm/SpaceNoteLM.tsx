@@ -11,8 +11,8 @@ import {
     Maximize2, Minimize2, ArrowLeft, ArrowRight as ArrowRightIcon,
     AlertCircle
 } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { NoteDocument } from '../../types';
+import { getAI } from '../../services/geminiService';
 
 // Interface for structured response chain
 interface AnalysisChainItem {
@@ -84,7 +84,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
 
         try {
             // Updated GoogleGenAI initialization
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const contextText = documents.map(d => `[FILE: ${d.title}]\n${d.content.substring(0, 20000)}`).join('\n\n');
 
             const systemPrompt = `
@@ -136,7 +136,7 @@ export const SpaceNoteLM: React.FC<SpaceNoteLMProps> = ({ isOpen, onClose, docum
 
         try {
             // Updated GoogleGenAI initialization
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const chainPrompt = `
             PROTOCOL: NARRATIVE CHAIN STAGE ${targetIndex + 1}
             PREVIOUS CONTEXT:

@@ -14,9 +14,8 @@ import {
     Bot, RefreshCcw, AlertTriangle, RotateCw, Orbit, Scan, Mic2
 } from 'lucide-react';
 import JSZip from 'jszip';
-import { generateNanoImage, generateStoryScenes } from '../../services/geminiService';
+import { generateNanoImage, generateStoryScenes, getAI } from '../../services/geminiService';
 import { exportArtboard, downloadBlob } from '../../services/exportService';
-import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from '../../types';
 import { AssistantPanel } from '../editor/AssistantPanel';
 
@@ -225,7 +224,7 @@ export const StoryCampaignFlow: React.FC<StoryCampaignFlowProps> = ({
         setChatInput("");
         setIsChatLoading(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: textToSend,

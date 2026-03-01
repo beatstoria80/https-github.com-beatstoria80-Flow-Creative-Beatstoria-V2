@@ -57,7 +57,8 @@ import {
     Sliders
 } from 'lucide-react';
 // Fix: Use 'Type' directly instead of 'Type as SchemaType' per coding guidelines
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { getAI } from '../../services/geminiService';
 
 const getApiKey = () => localStorage.getItem('gemini_api_key') || (import.meta as any).env.VITE_API_KEY || "";
 
@@ -888,7 +889,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         const selectedVoice = spk.gender === 'male' ? (style?.maleVoice || 'Puck') : (style?.femaleVoice || 'Kore');
         if (!isOnline) { showToast("ONLINE CONNECTION REQUIRED FOR SYNTHESIS"); return null; }
         try {
-            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const ai = getAI();
             const response = await ai.models.generateContent({ model: "gemini-1.5-flash", contents: [{ parts: [{ text: line.text }] }], config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } } });
             const candidate = response.candidates?.[0];
             const base64Audio = candidate?.content?.parts?.[0]?.inlineData?.data;
@@ -943,7 +944,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         setIsScripting(true); setScript([]); setResearchLabel("SINTESIS NEURAL AKTIF..."); handleStopPlayback();
         let currentSessionId = activeSessionId || `session-${Date.now()}`; setActiveSessionId(currentSessionId);
         try {
-            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const ai = getAI();
             const combinedSource = attachedFiles.filter(f => f.status === 'ready').map(f => f.content).join('\n');
 
             const speakerListStr = speakers.map(s => `ID: ${s.id}, Name: ${s.name}`).join('; ');
@@ -1189,7 +1190,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
         const styleObj = SCRIPT_STYLES.find(s => s.id === styleId);
         const styleLabel = styleObj?.label || "General";
         try {
-            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const ai = getAI();
             const scriptJson = JSON.stringify(script.map(l => ({ speakerId: l.speakerId, text: l.text })));
             const prompt = `TASK: ENHANCE SCRIPT PUNCTUATION AND STYLE FOR ${styleLabel}.
         STYLE TRAIT: ${styleObj?.tone}
@@ -1230,7 +1231,7 @@ export const VoiceStudio: React.FC<VoiceStudioProps> = ({
     const handleResearchFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files) as File[];
-            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const ai = getAI();
             for (const file of files) {
                 const id = `file-${Date.now()}`;
                 const type = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : (file.type.startsWith('image/') ? 'image' : 'text');

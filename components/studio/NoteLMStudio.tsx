@@ -33,6 +33,7 @@ import {
 } from '../../services/storageService';
 import { SpaceNoteLM } from '../spacenotelm/SpaceNoteLM';
 import { NoteDocument } from '../../types';
+import { getAI } from '../../services/geminiService';
 
 // --- STYLES ---
 const studioStyles = `
@@ -1421,7 +1422,7 @@ export const NoteLMStudio: React.FC<NoteLMStudioProps> = ({ isOpen, onClose, onO
                 setIsLoading(false);
                 return;
             }
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const activeDocsList = documents.filter(d => activeDocIds.includes(d.id));
             const contextText = activeDocsList.map(d => `[FILE: ${d.title}]\n${d.content}`).join('\n\n');
 

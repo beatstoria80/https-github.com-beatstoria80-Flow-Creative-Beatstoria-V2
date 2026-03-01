@@ -15,10 +15,10 @@ import {
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MessageSquare,
     Minimize2, Film
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { saveProjectToDB, getAllProjectsFromDB, deleteProjectFromDB, getProjectByIdFromDB, clearAllProjectsFromDB } from '../services/storageService';
 import { exportArtboard, downloadBlob } from '../services/exportService';
-import { Rnd } from 'react-rnd';
+import { ErrorBoundary } from './ErrorBoundary';
+import { getAI } from '../services/geminiService';
 
 // Lazy loaded components
 const CanvasPreview = React.lazy(() => import('./CanvasPreview'));
@@ -476,7 +476,7 @@ export const App: React.FC = () => {
         const textToSend = text || chatInput; if (!textToSend?.trim()) return;
         setChatMessages(prev => [...prev, { role: 'user', text: textToSend }]); setChatInput(""); setIsChatLoading(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || "" });
+            const ai = getAI();
             const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: textToSend, config: { systemInstruction: 'Anda adalah Asisten Neural untuk Space Studio Universal Creative Platform. Anda WAJIB menjawab user menggunakan Bahasa Indonesia yang profesional dan membantu. Berikan saran desain, penjelasan teknis, dan brainstorming kreatif di semua disiplin seni.' } });
             setChatMessages(prev => [...prev, { role: 'model', text: response.text || "" }]);
         } catch (error) { setChatMessages(prev => [...prev, { role: 'model', text: "Gagal menghubungkan ke Neural Hub." }]); } finally { setIsChatLoading(false); }

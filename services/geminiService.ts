@@ -1,9 +1,56 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getAI = () => {
-    const localKey = localStorage.getItem('gemini_api_key');
-    const envKey = (import.meta as any).env.VITE_API_KEY || "";
-    return new GoogleGenAI({ apiKey: localKey || envKey });
+export const getActiveApiKey = () => {
+    return localStorage.getItem('gemini_api_key') || (import.meta as any).env.VITE_API_KEY || "";
+};
+
+export const getAI = () => {
+    const apiKey = getActiveApiKey();
+
+    if (!apiKey) {
+        console.warn("API Key Gemini tidak ditemukan. Beberapa fitur AI mungkin tidak berfungsi.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Proxy generateContent to add Free Tier robustness
+    const originalGenerateContent = ai.models.generateContent.bind(ai.models);
+    ai.models.generateContent = async (params: any): Promise<any> => {
+        let retries = 3;
+        let delayMs = 2000; // Mulai dari 2 detik
+
+        while (retries > 0) {
+            try {
+                return await originalGenerateContent(params);
+            } catch (err: any) {
+                const errorMessage = err.message || "";
+                const status = err.status || 0;
+
+                const isRateLimit = status === 429 || errorMessage.includes('429') || /quota|exhausted|too many requests/i.test(errorMessage);
+                const isOverloaded = status === 503 || errorMessage.includes('503') || /overloaded/i.test(errorMessage);
+
+                if ((isRateLimit || isOverloaded) && retries > 1) {
+                    console.warn(`[Google AI Studio] Menunggu limit Free Tier... Mencoba lagi dalam ${delayMs / 1000} detik.`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    delayMs *= 2; // Exponential backoff (2s, 4s, 8s)
+                    retries--;
+                    continue;
+                }
+
+                if (errorMessage.includes("PERMISSION_DENIED") || /api key not valid/i.test(errorMessage)) {
+                    throw new Error("PERMISSION_DENIED: API Key Gemini Anda tidak valid atau belum diatur.");
+                }
+
+                if (isRateLimit) {
+                    throw new Error("RATE_LIMIT: Batas penggunaan API Free Tier Anda telah habis (Quota Exceeded). Mohon coba lagi beberapa saat.");
+                }
+
+                throw err;
+            }
+        }
+    };
+
+    return ai;
 };
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
